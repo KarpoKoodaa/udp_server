@@ -14,7 +14,7 @@
 #define GETSOCKETERRNO() (errno)
 
 
-int main() {
+int main(void) {
     printf("Configuring local address...\n");
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -60,13 +60,13 @@ int main() {
             socklen_t client_len = sizeof(client_address);
 
             char read[1024];
-            int bytes_received = recvfrom(socket_listen, read, 1024, 0, (struct sockaddr *)&client_address, &client_len);
+            long bytes_received = recvfrom(socket_listen, read, 1024, 0, (struct sockaddr *)&client_address, &client_len);
             if (bytes_received < 1) {
                 fprintf(stderr, "connection closed. (%d)\n", GETSOCKETERRNO());
                 return 1;
             }
 
-            printf("Received (%d bytes): %.*s\n", bytes_received, bytes_received, read);
+            printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
             printf("Remote address is: ");
             char address_buffer[100];
