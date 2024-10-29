@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include "../include/sleep.h"
+
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
 #define SOCKET int
@@ -28,6 +30,7 @@ double rand_number(void)
 int main(void) {
     
     static double packet_drop = 0.5;
+    static int delay_ms = 0;
     
     printf("Configuring local address...\n");
     struct addrinfo hints;
@@ -84,6 +87,7 @@ int main(void) {
                 printf("Packet dropped\n");
             }
             else {
+                msleep(delay_ms);
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
                 printf("Remote address is: ");
