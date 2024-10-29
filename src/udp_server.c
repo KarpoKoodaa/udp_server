@@ -87,6 +87,7 @@ int main(void) {
                 printf("Packet dropped\n");
             }
             else {
+                //TODO: Add to the virtual socket: randomly delays a packet, before passing it forward
                 msleep(delay_ms);
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
