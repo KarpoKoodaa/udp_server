@@ -25,4 +25,4 @@ $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
 clean:
-	$@(RM) -rv $(BUILD_DIR) $(OBJ_DIR)
+	rm -rv $(BUILD_DIR) $(OBJ_DIR)

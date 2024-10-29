@@ -1,3 +1,6 @@
+# Own
+build/
+
 # Prerequisites
 *.d
 

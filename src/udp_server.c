@@ -7,14 +7,28 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
 #define SOCKET int
 #define GETSOCKETERRNO() (errno)
 
+double rand_number(void)
+{
+    int max = 10;
+    int min = 1;
+
+    int rd_num = rand() % (max - min + 1) + min;
+    
+    return (float)rd_num / 10;
+}
+
 
 int main(void) {
+    
+    static double packet_drop = 0.5;
+    
     printf("Configuring local address...\n");
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -66,17 +80,23 @@ int main(void) {
                 return 1;
             }
 
-            printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
+            if (rand_number() <= packet_drop) {
+                printf("Packet dropped\n");
+            }
+            else {
+                printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
-            printf("Remote address is: ");
-            char address_buffer[100];
-            char service_buffer[100];
-            getnameinfo(((struct sockaddr*)&client_address),
-                    client_len,
-                    address_buffer, sizeof(address_buffer),
-                    service_buffer, sizeof(service_buffer),
-                    NI_NUMERICHOST | NI_NUMERICSERV);
-            printf("%s %s\n", address_buffer, service_buffer);
+                printf("Remote address is: ");
+                char address_buffer[100];
+                char service_buffer[100];
+                getnameinfo(((struct sockaddr*)&client_address),
+                        client_len,
+                        address_buffer, sizeof(address_buffer),
+                        service_buffer, sizeof(service_buffer),
+                        NI_NUMERICHOST | NI_NUMERICSERV);
+                printf("%s %s\n", address_buffer, service_buffer);
+            }
+            
         }
     }
    
