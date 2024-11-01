@@ -27,10 +27,22 @@ double rand_number(void)
 }
 
 
-int main(void) {
+int main(int argc, char* argv[]) {
     
     static double packet_drop = 0.5;
     static int delay_ms = 0;
+
+    char *port = 0;
+
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+        return 1;
+    }
+    else {
+        port = argv[1];
+    }
+
+    
     
     printf("Configuring local address...\n");
     struct addrinfo hints;
@@ -40,7 +52,7 @@ int main(void) {
     hints.ai_flags = AI_PASSIVE;
 
     struct addrinfo *bind_address;
-    getaddrinfo(0, "6666", &hints, &bind_address);  // TODO: port number from cli arguments
+    getaddrinfo(0, port, &hints, &bind_address);  // TODO: port number from cli arguments
 
     printf("Creating socket...\n");
     SOCKET socket_listen;
