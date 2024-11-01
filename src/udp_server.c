@@ -95,7 +95,14 @@ int main(int argc, char* argv[]) {
                     printf("Delay added\n");
                     msleep(delay_ms);
                 }
-                
+                // Add bit error
+                else if (rand_number() <= packet_delay) {
+                    read[bytes_received - 2] += 1;
+                }
+
+                // Print the CRC-8
+                // printf("%d\n", read[bytes_received-1]);
+                                
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
                 printf("Remote address is: ");
