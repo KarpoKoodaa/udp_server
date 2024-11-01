@@ -19,8 +19,9 @@
 
 int main(int argc, char* argv[]) {
     
-    static double packet_drop = 0.5;
-    static int delay_ms = 0;
+    const double packet_drop = 0.5;
+    const double packet_delay = 0.8;
+    const int delay_ms = 0;
 
     char *port = 0;
 
@@ -42,7 +43,7 @@ int main(int argc, char* argv[]) {
     hints.ai_flags = AI_PASSIVE;
 
     struct addrinfo *bind_address;
-    getaddrinfo(0, port, &hints, &bind_address);  // TODO: port number from cli arguments
+    getaddrinfo(0, port, &hints, &bind_address);  
 
     printf("Creating socket...\n");
     SOCKET socket_listen;
@@ -89,8 +90,12 @@ int main(int argc, char* argv[]) {
                 printf("Packet dropped\n");
             }
             else {
-                //TODO: Add to the virtual socket: randomly delays a packet, before passing it forward
-                msleep(delay_ms);
+                
+                if (rand_number() <= packet_delay) {
+                    printf("Delay added\n");
+                    msleep(delay_ms);
+                }
+                
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
                 printf("Remote address is: ");
