@@ -8,4 +8,4 @@
 
 int msleep(long msec);
 
-#endif /* __FILE_NAME_H__ */
+#endif /* __SLEEP_H__ */

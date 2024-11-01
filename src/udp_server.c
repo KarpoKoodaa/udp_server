@@ -10,22 +10,12 @@
 #include <stdlib.h>
 
 #include "../include/sleep.h"
+#include "../include/rdn_num.h"
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
 #define SOCKET int
 #define GETSOCKETERRNO() (errno)
-
-double rand_number(void)
-{
-    int max = 10;
-    int min = 1;
-
-    int rd_num = rand() % (max - min + 1) + min;
-    
-    return (float)rd_num / 10;
-}
-
 
 int main(int argc, char* argv[]) {
     
