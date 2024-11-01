@@ -1,5 +1,6 @@
 # Own
-build/*
+**/.build
+**/build
 
 # Prerequisites
 *.d
