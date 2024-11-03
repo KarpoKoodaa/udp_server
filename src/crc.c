@@ -3,6 +3,11 @@
 
 #include "../include/crc.h"
 
+/**
+ * @brief precompute the CRC8 output remainders of each possible input
+ * 
+ */
+
 void crcInit(void)
 {
     crc remainder;
@@ -22,7 +27,15 @@ void crcInit(void)
         crcTable[dividend] = remainder;
 
     }
-}
+}   /* crcInit */
+
+/**
+ * @brief Compute the CRC of given message
+ * @note  crcInit() must be called first
+ * @param message '8'-bit message data for which the CRC is calculated
+ * @param nBytes The number of bytes in the message
+ * @return crc The computed CRC value (uint8_t)
+ */
 
 crc crcFast (uint8_t const message[], int nBytes) 
 {
@@ -35,4 +48,4 @@ crc crcFast (uint8_t const message[], int nBytes)
     }
 
     return (remainder);
-}
+}   /* crcFast() */

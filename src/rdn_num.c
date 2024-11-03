@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/**
+ * @brief Random number generator
+ * @note  Random numbers are between 0.1 - 1.0
+ * @return random number divided by '10'
+ */
 
 double rand_number(void)
 {
@@ -9,5 +14,5 @@ double rand_number(void)
 
     int rd_num = rand() % (max - min + 1) + min;
     
-    return (float)rd_num / 10;
-}
+    return (double)rd_num / 10;
+}   /* rand_number() */
