@@ -1,3 +1,16 @@
+/******************************************
+ * 
+ * Filename:    crc.c
+ * 
+ * Description: Fast implementation of CRC8
+ * 
+ * Notes:       Based on Michael Barr's CRC8 examples: 
+ *              https://barrgroup.com/blog/crc-series-part-3-crc-implementation-code-cc
+ * 
+ * Copyright (c) 2024 Kariantti Laitala
+ * Permission tba
+ *******************************************/
+
 #include <stdio.h>
 #include <string.h>
 

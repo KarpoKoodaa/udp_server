@@ -1,5 +1,18 @@
+/******************************************
+ * 
+ * Filename:    rdn_num.c
+ * 
+ * Description: Generates random numbers between 0.1 - 1.0
+ * 
+ * Copyright (c) 2024 Kariantti Laitala
+ * Permission tba
+ *******************************************/
+
+
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../include/rdn_num.h"
 
 /**
  * @brief Random number generator
