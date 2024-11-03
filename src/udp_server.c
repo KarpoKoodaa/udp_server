@@ -1,3 +1,14 @@
+/******************************************
+ * 
+ * Filename:    udp_server.c
+ * 
+ * Description: udp_server for university exercise.
+ *              Based on Lewis Van Winkle's "Hands-on Network Programming with C" book
+ * 
+ * Copyright (c) 2024 Kariantti Laitala
+ * Permission tba
+ *******************************************/
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
