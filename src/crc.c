@@ -1,14 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
 
-typedef uint8_t crc;
-crc crcTable[256]; // Move to header
-
-#define WIDTH   (8 * sizeof(crc))
-#define TOPBIT  (1 << (WIDTH -1))
-
-#define POLYNOMIAL 0x07  /* 11011 followed by 0's */
+#include "../include/crc.h"
 
 void crcInit(void)
 {
@@ -43,5 +36,3 @@ crc crcFast (uint8_t const message[], int nBytes)
 
     return (remainder);
 }
-
-

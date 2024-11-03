@@ -11,11 +11,14 @@
 
 #include "../include/sleep.h"
 #include "../include/rdn_num.h"
+#include "../include/crc.h"
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
 #define SOCKET int
 #define GETSOCKETERRNO() (errno)
+
+crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
@@ -33,7 +36,8 @@ int main(int argc, char* argv[]) {
         port = argv[1];
     }
 
-    
+    // Init CRC8 table
+    crcInit();
     
     printf("Configuring local address...\n");
     struct addrinfo hints;
@@ -102,6 +106,17 @@ int main(int argc, char* argv[]) {
 
                 // Print the CRC-8
                 printf("%x\n", (unsigned char) read[bytes_received-1]);
+                crc data[8];
+                for (long i = 0; i < bytes_received; ++i) {
+                    data[i] = read[bytes_received];
+                }
+                data[bytes_received+1] = '\0';
+
+                printf("Data: %s\n", data);
+                crc result = crcFast(data, bytes_received);
+
+                printf("CRC: %d\n", result);
+
                                 
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             
@@ -118,7 +133,7 @@ int main(int argc, char* argv[]) {
             
         }
     }
-   
+    // Should never end up here
 
     printf("Finished.\n");
 
