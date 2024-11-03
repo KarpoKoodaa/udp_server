@@ -19,8 +19,8 @@
 
 int main(int argc, char* argv[]) {
     
-    const double packet_drop = 0.5;
-    const double packet_delay = 0.8;
+    const double packet_drop = 0.0;
+    const double packet_delay = 0.0;
     const int delay_ms = 0;
 
     char *port = 0;
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 // Print the CRC-8
-                // printf("%d\n", read[bytes_received-1]);
+                printf("%x\n", (unsigned char) read[bytes_received-1]);
                                 
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
             

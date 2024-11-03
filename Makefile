@@ -7,7 +7,7 @@ OBJ_DIR := ${BUILD_DIR}/obj
 BUILD_DIR := ./build
 
 CC := gcc
-CC_FLAGS := -I${INC_DIR} -Wall -Wextra -Wpedantic -Werror -Wshadow -Wformat=2 -Wconversion -Wunused-parameter -g
+CC_FLAGS := -I${INC_DIR} -Wall -Wextra -Wpedantic -Werror -Wshadow -Wformat=2  -Wunused-parameter -g
 
 EXE := $(BUILD_DIR)/udp-server
 SRC := $(wildcard $(SRC_DIR)/*.c)
