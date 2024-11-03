@@ -33,11 +33,14 @@ crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
+    // Probability variables for packet drops and delays
+    // TODO: Consider adding these to cli parameters
     const double packet_drop = 0.0;
-    const double packet_delay = 0.0;
+    const double packet_delay = 0.5;
     const int delay_ms = 0;
 
-    char *port = 0;
+    // UDP server port
+    char *port = NULL;
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
@@ -47,7 +50,7 @@ int main(int argc, char* argv[]) {
         port = argv[1];
     }
 
-    // Init CRC8 table
+    // Precompute CRC8 table for fastCRC
     crcInit();
     
     printf("Configuring local address...\n");
@@ -89,7 +92,7 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "select() failed. (%d)\n", GETSOCKETERRNO());
             return 1;
         }
-
+        // Connection established
         if (FD_ISSET(socket_listen, &reads)) {
             struct sockaddr_storage client_address;
             socklen_t client_len = sizeof(client_address);
@@ -101,27 +104,33 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
+            /* VIRTUAL SOCKET BEGINS */
+
+            // Drop packet
             if (rand_number() <= packet_drop) {
                 printf("Packet dropped\n");
             }
             else {
-                
+                // Add delay   
                 if (rand_number() <= packet_delay) {
                     printf("Delay added\n");
                     msleep(delay_ms);
                 }
                 // Add bit error
                 else if (rand_number() <= packet_delay) {
-                    read[bytes_received - 2] += 1;
+                    char mask = 0x2;
+                    read[bytes_received-2] = read[bytes_received-2] ^ mask;
                 }
+                char mask = 0x2;
+                read[bytes_received-2] = read[bytes_received-2] ^ mask;
 
                 // Print the CRC-8
-                printf("%x\n", (unsigned char) read[bytes_received-1]);
+                printf("%x\n", (unsigned char)read[bytes_received-1]);
                 crc data[8];
                 for (long i = 0; i < bytes_received; ++i) {
-                    data[i] = read[bytes_received];
+                    data[i] = read[i];
                 }
-                data[bytes_received+1] = '\0';
+                data[bytes_received] = '\0';
 
                 printf("Data: %s\n", data);
                 crc result = crcFast(data, bytes_received);
@@ -150,4 +159,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 
-}
+} /* main() */
