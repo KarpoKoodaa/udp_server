@@ -9,8 +9,15 @@
  * Permission tba
  *******************************************/
 
+// 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+// Getopt
+#include <ctype.h>
+
+// Network 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -18,8 +25,8 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
-#include <stdlib.h>
 
+// Locals
 #include "../include/sleep.h"
 #include "../include/rdn_num.h"
 #include "../include/crc.h"
@@ -35,20 +42,51 @@ int main(int argc, char* argv[]) {
     
     // Probability variables for packet drops and delays
     // TODO: Consider adding these to cli parameters
-    const double packet_drop = 0.0;
-    const double packet_delay = 0.5;
-    const int delay_ms = 0;
+    double packet_drop = 0.0;
+    double packet_delay = 0.0;
+    int delay_ms = 0;
 
     // UDP server port
     char *port = NULL;
+    port = "6666";
+    
+    int c = 0;
+    opterr = 0;
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         return 1;
     }
-    else {
-        port = argv[1];
+
+    while((c = getopt(argc, argv, "p:l:d:t:")) != -1) {
+        switch (c)
+        {
+        case 'p':
+            port = optarg;
+            break;
+        case 'l':
+            packet_drop = (double)atof(optarg);
+            break;
+        case 'd':
+            packet_delay = (double)atof(optarg);
+            break;
+        case 't':
+            delay_ms = atoi(optarg);
+            break;
+        case '?':
+            fprintf(stderr, "Usage: %s [-p port] [-l packet loss probability] [-d packet delay probability] [-t delay in ms]\n", argv[0]);
+            return 1;
+            break;
+        default:
+            fprintf(stderr, "Usage: %s [-p port] [-l packet_loss probability]\n",
+                           argv[0]);
+            return 1;
+            break;
+        }
     }
+
+    printf("port: %s \tPacket Loss: %.1f \t Packet Delay: %.1f\t Delay: %d ms\n", port, packet_drop, packet_delay, delay_ms);
+
 
     // Precompute CRC8 table for fastCRC
     crcInit();
