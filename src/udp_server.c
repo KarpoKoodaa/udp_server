@@ -41,7 +41,6 @@ crc crcTable[256];
 int main(int argc, char* argv[]) {
     
     // Probability variables for packet drops and delays
-    // TODO: Consider adding these to cli parameters
     double packet_drop = 0.0;
     double packet_delay = 0.0;
     int delay_ms = 0;
@@ -54,10 +53,12 @@ int main(int argc, char* argv[]) {
     opterr = 0;
 
     if (argc < 2) {
+        //TODO: Fix this as Usage changed
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         return 1;
     }
 
+    //TODO: Needs some refactoring
     while((c = getopt(argc, argv, "p:l:d:t:")) != -1) {
         switch (c)
         {
