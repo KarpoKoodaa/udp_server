@@ -2,11 +2,10 @@
 udp_server for school task 
 
 ### Hours spent
-10h 45min
+11h 45min
 
 
 ### TODO
-- Refactor the code and merge the branches
 - Start with Positive and Negative ACKs
 
 ### Command-Line Arguments
@@ -26,7 +25,7 @@ The application accepts the following command-line arguments:
 ### Example Usage
 
 ```bash
-./udr_server -p 1243 -d 0.1 -r 0.05 -t 100
+./udp_server -p 1243 -d 0.1 -r 0.05 -t 100
 
 - -p 1243: Sets the port number to 1243. (default 6666)
 - -d 0.1: Sets the probability for packet delay to 0.1.

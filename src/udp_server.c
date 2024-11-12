@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
     double drop_prob = 0.0;
     double delay_prob = 0.0;
     int delay_ms = 0;
+    double error_probability = 0.3;
 
     // UDP server port
     char *port = NULL;
@@ -148,29 +149,32 @@ int main(int argc, char* argv[]) {
                     msleep(delay_ms);
                 }
                 // Add bit error
-                else if (rand_number() <= delay_prob) {
+                if (rand_number() <= error_probability) {
                     char mask = 0x2;
                     read[bytes_received-2] = read[bytes_received-2] ^ mask;
                 }
-                char mask = 0x2;
-                read[bytes_received-2] = read[bytes_received-2] ^ mask;
-
+               
                 // Print the CRC-8
-                printf("%x\n", (unsigned char)read[bytes_received-1]);
+                printf("Received CRC: %x\n", (unsigned char)read[bytes_received-1]);
                 crc data[8];
                 for (long i = 0; i < bytes_received; ++i) {
                     data[i] = read[i];
                 }
                 data[bytes_received] = '\0';
 
-                printf("Data: %s\n", data);
                 crc result = crcFast(data, bytes_received);
 
                 printf("CRC: %d\n", result);
 
                                 
-                printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
-            
+                printf("Received (%ld bytes): %.*s", bytes_received, (int)bytes_received, read);
+                if (result) {
+                    printf("\t Bit error detected!!\n");
+                }
+                else {
+                    printf("\n");
+                }
+
                 printf("Remote address is: ");
                 char address_buffer[100];
                 char service_buffer[100];
