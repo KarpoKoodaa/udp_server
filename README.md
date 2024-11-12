@@ -14,7 +14,7 @@ The application accepts the following command-line arguments:
 
 | Argument                            | Description                            | Shorthand |
 |-------------------------------------|----------------------------------------|-----------|
-| Port number                         | The port your application uses (default: `8080`)        | `-p`      |
+| Port number                         | The port your application uses (default: `6666`)        | `-p`      |
 | Probability for packet delay        | Delay probability (0.0 to 1.0)         | `-d`      |
 | Probability for packet drop         | Drop probability (0.0 to 1.0)          | `-r`      |
 | Delay in milliseconds               | Delay time in ms                       | `-t`      |
