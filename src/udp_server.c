@@ -36,57 +36,49 @@
 #define SOCKET int
 #define GETSOCKETERRNO() (errno)
 
+#define DEFAULT_PORT   "6666"
+
 crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
     // Probability variables for packet drops and delays
-    double packet_drop = 0.0;
-    double packet_delay = 0.0;
+    double drop_prob = 0.0;
+    double delay_prob = 0.0;
     int delay_ms = 0;
 
     // UDP server port
     char *port = NULL;
-    port = "6666";
+    port = DEFAULT_PORT;
     
     int c = 0;
     opterr = 0;
 
-    if (argc < 2) {
-        //TODO: Fix this as Usage changed
-        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-        return 1;
-    }
-
-    //TODO: Needs some refactoring
-    while((c = getopt(argc, argv, "p:l:d:t:")) != -1) {
+    // Parse command line arguments
+    while((c = getopt(argc, argv, "p:d:r:t:")) != -1) {
         switch (c)
         {
         case 'p':
             port = optarg;
             break;
-        case 'l':
-            packet_drop = (double)atof(optarg);
+        case 'r':
+            drop_prob = (double)atof(optarg);
             break;
         case 'd':
-            packet_delay = (double)atof(optarg);
+            delay_prob = (double)atof(optarg);
             break;
         case 't':
             delay_ms = atoi(optarg);
             break;
-        case '?':
-            fprintf(stderr, "Usage: %s [-p port] [-l packet loss probability] [-d packet delay probability] [-t delay in ms]\n", argv[0]);
-            return 1;
-            break;
         default:
-            fprintf(stderr, "Usage: %s [-p port] [-l packet_loss probability]\n",
+            fprintf(stderr, "Usage: %s -p port -d delay_prob -r drop_prob -t delay_ms\n",
                            argv[0]);
             return 1;
             break;
         }
     }
 
-    printf("port: %s \tPacket Loss: %.1f \t Packet Delay: %.1f\t Delay: %d ms\n", port, packet_drop, packet_delay, delay_ms);
+    printf("port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", port, drop_prob, delay_prob, delay_ms);
 
 
     // Precompute CRC8 table for fastCRC
@@ -146,17 +138,17 @@ int main(int argc, char* argv[]) {
             /* VIRTUAL SOCKET BEGINS */
 
             // Drop packet
-            if (rand_number() <= packet_drop) {
+            if (rand_number() <= drop_prob) {
                 printf("Packet dropped\n");
             }
             else {
                 // Add delay   
-                if (rand_number() <= packet_delay) {
+                if (rand_number() <= delay_prob) {
                     printf("Delay added\n");
                     msleep(delay_ms);
                 }
                 // Add bit error
-                else if (rand_number() <= packet_delay) {
+                else if (rand_number() <= delay_prob) {
                     char mask = 0x2;
                     read[bytes_received-2] = read[bytes_received-2] ^ mask;
                 }
