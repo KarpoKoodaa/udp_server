@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // Getopt
 #include <ctype.h>
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]) {
     double delay_prob = 0.0;
     int delay_ms = 0;
     double error_probability = 0.1;
+    bool rdt_2 = false;     // Reliable data transfer
 
     // UDP server port
     char *port = NULL;
@@ -56,9 +58,12 @@ int main(int argc, char* argv[]) {
     opterr = 0;
 
     // Parse command line arguments
-    while((c = getopt(argc, argv, "p:d:r:t:")) != -1) {
+    while((c = getopt(argc, argv, "xp:d:r:t:v:")) != -1) {
         switch (c)
         {
+        case 'x':
+            rdt_2 = true;
+            break;
         case 'p':
             port = optarg;
             break;
@@ -168,19 +173,17 @@ int main(int argc, char* argv[]) {
 
                                 
                 printf("Received (%ld bytes): %.*s", bytes_received, (int)bytes_received, read);
-                char ack[5];    // Acknowledgment, 0 = NAK+0x12, 1 = ACK+0xF7
+                char ack[5];    // Acknowledgment, 
                 if (result) {
                     printf("\t Bit error detected!!\n");
-                    //ack = '0'; 
                     strcpy(ack, "NAK");
-                    ack[3] = 0x12;
+                    ack[3] = 0x12;  // CRC8
                     ack[4] = '\0';
                 }
                 else {
                     printf("\n");
-                    // ack = '1';
                     strcpy(ack, "ACK");
-                    ack[3] = 0x7f;
+                    ack[3] = 0x7f; // CRC8
                     ack[4] = '\0';
                 }
 
@@ -193,8 +196,14 @@ int main(int argc, char* argv[]) {
                         service_buffer, sizeof(service_buffer),
                         NI_NUMERICHOST | NI_NUMERICSERV);
                 printf("%s %s\n", address_buffer, service_buffer);
-                printf("Sending %x, %ld\n", ack[3], sizeof(ack)-1);
-                sendto(socket_listen, ack, sizeof(ack)-1, 0, (struct sockaddr*)&client_address, client_len);
+                
+                // Drop the null pointer from ACK/NACK response
+                if (rdt_2 == true)
+                {
+                    printf("Sending %x, %ld\n", ack[3], sizeof(ack)-1);
+                    sendto(socket_listen, ack, sizeof(ack)-1, 0, (struct sockaddr*)&client_address, client_len);
+                }
+                
 
             }
             
