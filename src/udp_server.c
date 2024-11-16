@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     double drop_prob = 0.0;
     double delay_prob = 0.0;
     int delay_ms = 0;
-    double error_probability = 0.3;
+    double error_probability = 0.1;
 
     // UDP server port
     char *port = NULL;
@@ -168,11 +168,20 @@ int main(int argc, char* argv[]) {
 
                                 
                 printf("Received (%ld bytes): %.*s", bytes_received, (int)bytes_received, read);
+                char ack[5];    // Acknowledgment, 0 = NAK+0x12, 1 = ACK+0xF7
                 if (result) {
                     printf("\t Bit error detected!!\n");
+                    //ack = '0'; 
+                    strcpy(ack, "NAK");
+                    ack[3] = 0x12;
+                    ack[4] = '\0';
                 }
                 else {
                     printf("\n");
+                    // ack = '1';
+                    strcpy(ack, "ACK");
+                    ack[3] = 0x7f;
+                    ack[4] = '\0';
                 }
 
                 printf("Remote address is: ");
@@ -184,6 +193,9 @@ int main(int argc, char* argv[]) {
                         service_buffer, sizeof(service_buffer),
                         NI_NUMERICHOST | NI_NUMERICSERV);
                 printf("%s %s\n", address_buffer, service_buffer);
+                printf("Sending %x, %ld\n", ack[3], sizeof(ack)-1);
+                sendto(socket_listen, ack, sizeof(ack)-1, 0, (struct sockaddr*)&client_address, client_len);
+
             }
             
         }
