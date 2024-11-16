@@ -2,11 +2,13 @@
 udp_server for school task 
 
 ### Hours spent
-11h 45min
+14h 15min
 
 
 ### TODO
-- Start with Positive and Negative ACKs
+- Add -x command line argument to ReadME
+- Continue with Reliable data transfer with only positive ACKs
+- Reliable data transfer with only negative ACKs
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
