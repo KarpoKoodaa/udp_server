@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
                     fprintf(stderr, "Error creating packet\n");
                     break;
                 }
-
+                printf("Packet size: %lu\n", sizeof(packet));
                 printf("Remote address is: ");
                 char address_buffer[100];
                 char service_buffer[100];
@@ -227,11 +227,11 @@ int main(int argc, char* argv[]) {
                     {
                     case 0:
                         printf("Sending: %c, %ld\n", packet[3], sizeof(packet)-1);
-                        sendto(socket_listen, packet, sizeof(packet)-1, 0, (struct sockaddr*)&client_address, client_len);
+                        sendto(socket_listen, packet, sizeof(packet)-2, 0, (struct sockaddr*)&client_address, client_len);
                         break;
                     case 1:
                         printf("Sending: %x, %ld\n", packet[3], sizeof(packet)-1);
-                        sendto(socket_listen, packet, sizeof(packet)-1, 0, (struct sockaddr*)&client_address, client_len);
+                        sendto(socket_listen, packet, sizeof(packet)-2, 0, (struct sockaddr*)&client_address, client_len);
                         break;
                     default:
                         break;
@@ -271,7 +271,7 @@ int make_packet(char *packet, int version, int seq, int result) {
         return 1;     
     }
 
-    // Packet example: ACK0CRC
+    // Packet example: ACKCRC
     if (version < 2) {
         if (!result) {
             strcpy(packet, "ACK");
@@ -285,6 +285,7 @@ int make_packet(char *packet, int version, int seq, int result) {
         }
         return 0;
     }
+    // Packet example: ACKCRC
     else if (version == 2) {
         if (result) {
             strcpy(packet, "ACK");
@@ -299,6 +300,11 @@ int make_packet(char *packet, int version, int seq, int result) {
             packet[5] = '\0';
         }
         return 0;
+    }
+    // Packet example: ACK0CRC
+    // TODO: ACK with sequence and CRC
+    else if (version == 21 || version == 22) {
+        
     }
 
     return 1;
