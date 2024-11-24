@@ -257,8 +257,6 @@ int main(int argc, char* argv[]) {
     RDT2.2 = ACK/NAK+SEQ+CHECKSUM
 
 */
-
-
 int make_packet(char *packet, int version, uint8_t seq, int result) {
 
     if (seq > 1) {
@@ -266,6 +264,7 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     }
 
     // Packet example: ACKCRC
+    // TODO: Refactor these to similar to version 22
     if (version == 20 || version == 21) {
         if (!result) {
             strcpy(packet, "ACK");
