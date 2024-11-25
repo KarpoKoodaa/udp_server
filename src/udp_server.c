@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     double delay_prob = 0.0;
     int delay_ms = 0;
     double error_probability = 0.1;
-    unsigned int rdt = 0;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
+    unsigned int rdt = 10;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
     uint8_t seq = 0;                // Sequence
 
     // UDP server port
