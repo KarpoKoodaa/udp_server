@@ -269,28 +269,35 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     }
 
     int packet_len = 0;
+    uint8_t CRC = 0;
     // Packet example: ACKCRC
     // TODO: Refactor these to similar to version 22
     // TODO: Fix to return check length of packet with snprintf
     if (version == 20 || version == 21) {
         if (!result) {
-            strcpy(packet, "ACK");
-            packet[3] = 0x7f; // CRC8
-            packet[4] = '\0';
+            CRC = 0x7f;
+            snprintf(packet, sizeof(packet),"ACK%c", CRC);
+            packet_len = snprintf(packet, sizeof(packet),"ACK%c", CRC);
+            // strcpy(packet, "ACK");
+            // packet[3] = 0x7f; // CRC8
+            // packet[4] = '\0';
         }
         else {
-            strcpy(packet, "NAK");
-            packet[3] = 0x12;  // CRC8
-            packet[4] = '\0';
+            CRC = 0x12;
+            snprintf(packet, sizeof(packet),"NAK%c", CRC);
+            packet_len = snprintf(packet, sizeof(packet),"ACK%c", CRC);
+            // strcpy(packet, "NAK");
+            // packet[3] = 0x12;  // CRC8
+            // packet[4] = '\0';
         }
-        return 0;
+        return packet_len;
     }
     // Packet example: SEQ:ACK:CRC
     else if (version == 22) {
         if (!result) {
-            uint8_t CRC = 0;
+            
 
-            // This is strange. The test app responses ACK with CRC 69, if sequency is 1
+            // This is strange. The test app responses ACK with CRC 69, if sequence is 1
             if ( seq == 1){
                 CRC = 0x69;
             } else CRC = 0x7f;
@@ -299,15 +306,16 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
             packet_len = snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC);            
         }
         else {
-            uint8_t CRC = 0x12;
+            CRC = 0x12;
             snprintf(packet, sizeof(packet), "%cNAK%c", seq, CRC);
-            //TODO: Fix to return check length of packet with snprintf
+            packet_len = snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC); 
+            
         }
         return packet_len;
     }
        
 
-    return 1;
+    return 0;
 
 
 }
