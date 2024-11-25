@@ -191,8 +191,11 @@ int main(int argc, char* argv[]) {
                                 
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
                 
-                char packet[5] = {0};
-                if (make_packet(packet, rdt, seq, result) == 1) {
+                char packet[8] = {0};
+                int packet_len = 0;
+                packet_len = make_packet(packet, rdt, seq, result);
+                // TODO: What is smallest packet here?
+                if (packet_len < 1) {
                     fprintf(stderr, "Error creating packet\n");
                     //TODO: Cannot break here as program exits. Find a solution.
                     break;
@@ -213,26 +216,28 @@ int main(int argc, char* argv[]) {
                     printf("Sending: %x, %ld\n", packet[3], sizeof(packet)-1);
                     sendto(socket_listen, packet, sizeof(packet)-1, 0, (struct sockaddr*)&client_address, client_len);
                 }
-
-                // Drop the null pointer from ACK/NACK response
+                printf("Packet: %s\n", packet);
+                
+                
                 if (rdt == 0 && !result)
                 {
+                    // TODO: fix using packet_len
                     printf("Sending %c, %ld\n", packet[3], sizeof(packet)-2);
                     sendto(socket_listen, packet, sizeof(packet)-1, 0, (struct sockaddr*)&client_address, client_len);
                 }
                 else if (rdt == 10 && result == 0) {
-                    // TODO: Fix magic number from packet size
+                    // TODO: fix using packet_len
                     printf("Sending v1.0: %c, %ld\n", packet[3], sizeof(packet)-2);
                     sendto(socket_listen, packet, sizeof(packet)-2, 0, (struct sockaddr*)&client_address, client_len);
                 }
                 else if ((rdt == 20 || rdt == 21) && result == 0) {
-                    // TODO: Fix magic number from packet size
+                    // TODO: fix using packet_len
                     printf("Sending v2.0 or v2.1: %s, %ld\n", packet, sizeof(packet)-1);
-                    sendto(socket_listen, packet, sizeof(packet)-1, 0, (struct sockaddr*)&client_address, client_len);
+                    sendto(socket_listen, packet, sizeof(packet), 0, (struct sockaddr*)&client_address, client_len);
                 }
                 else if (rdt == 22 && result == 0) {
-                    printf("Sending v2.2:%x %s, %ld\n", packet[0], packet, sizeof(packet));
-                    sendto(socket_listen, packet, sizeof(packet), 0, (struct sockaddr*)&client_address, client_len);
+                    printf("Sending v2.2: len: %d %s\n", packet_len, packet);
+                    sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
                 }
                 
 
@@ -263,8 +268,10 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
         return 1;     
     }
 
+    int packet_len = 0;
     // Packet example: ACKCRC
     // TODO: Refactor these to similar to version 22
+    // TODO: Fix to return check length of packet with snprintf
     if (version == 20 || version == 21) {
         if (!result) {
             strcpy(packet, "ACK");
@@ -289,13 +296,14 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
             } else CRC = 0x7f;
 
             snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC);
-            
+            packet_len = snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC);            
         }
         else {
             uint8_t CRC = 0x12;
             snprintf(packet, sizeof(packet), "%cNAK%c", seq, CRC);
+            //TODO: Fix to return check length of packet with snprintf
         }
-        return 0;
+        return packet_len;
     }
        
 
