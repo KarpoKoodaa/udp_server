@@ -2,11 +2,10 @@
 udp_server for school task 
 
 ### Hours spent
-19h 45min
+20h 00min
 
 
 ### TODO
-- Add -x command line argument to README
 - Continue with Reliable data transfer with only positive ACKs
 - Reliable data transfer with only negative ACKs
 
@@ -23,7 +22,7 @@ The application accepts the following command-line arguments:
 
 ### Default Values
 - **Port**: If the `-p` argument is not provided, the default port number will be `6666`.
-- **RDR**: If the `-x`argument is not provided, the default rdt will be `rdt 1.0`
+- **RDT**: If the `-x`argument is not provided, the default rdt will be `rdt 1.0`
 - **Other**: If arguments for probability and delay is not provided, the default values will be `0`.
 
 ### Example Usage

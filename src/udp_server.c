@@ -76,15 +76,19 @@ int main(int argc, char* argv[]) {
             rdt = (int)rdt_version;
             break;
         case 'p':
+            // Port
             port = optarg;
             break;
         case 'r':
+            // Probability for packet drop
             drop_prob = (double)atof(optarg);
             break;
         case 'd':
+            // Probability for packet delay
             delay_prob = (double)atof(optarg);
             break;
         case 't':
+            // Delay is ms
             delay_ms = atoi(optarg);
             break;
         default:
@@ -173,7 +177,7 @@ int main(int argc, char* argv[]) {
                 // Print the CRC-8
                 printf("First byte: %x\n", (unsigned char) read[0]);
                 printf("Received CRC: %x\n", (unsigned char)read[bytes_received-1]);
-                crc data[8];
+                crc data[100];
                 for (long i = 0; i < bytes_received; ++i) {
                     data[i] = read[i];
                 }
@@ -195,7 +199,7 @@ int main(int argc, char* argv[]) {
                 int packet_len = 0;
 
                 // If RDT 1.0, no ACK/NAK 
-                if (rdt > 1) {
+                if (rdt == 1) {
                     continue;
                 }
                 packet_len = make_packet(packet, rdt, seq, result);
@@ -222,27 +226,29 @@ int main(int argc, char* argv[]) {
                 }
                 printf("Packet: %s\n", packet);
                 
+                printf("Sending v%1.1f: CRC: %x, size: %d\n", (float)rdt/10, packet[3], packet_len);
+                sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
                 
-                if (rdt == 0 && !result)
-                {
+                // if (rdt == 0 && !result)
+                // {
                     
-                    printf("Sending. CRC: %x, size: %d\n", packet[3], packet_len);
-                    sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                }
-                else if (rdt == 10 && result == 0) {
+                //     printf("Sending. CRC: %x, size: %d\n", packet[3], packet_len);
+                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
+                // }
+                // else if (rdt == 10 && result == 0) {
                     
-                    printf("Sending v1.0. CRC: %x, size: %d\n", packet[3], packet_len);
-                    sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                }
-                else if ((rdt == 20 || rdt == 21) && result == 0) {
+                //     printf("Sending v1.0. CRC: %x, size: %d\n", packet[3], packet_len);
+                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
+                // }
+                // else if ((rdt == 20 || rdt == 21) && result == 0) {
                     
-                    printf("Sending v2.0 or v2.1: . CRC: %x, size: %d\n", packet[3], packet_len);
-                    sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                }
-                else if (rdt == 22 && result == 0) {
-                    printf("Sending v2.2: len: %d %s\n", packet_len, packet);
-                    sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                }
+                //     printf("Sending v2.0 or v2.1: . CRC: %x, size: %d\n", packet[3], packet_len);
+                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
+                // }
+                // else if (rdt == 22 && result == 0) {
+                //     printf("Sending v2.2: len: %d %s\n", packet_len, packet);
+                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
+                // }
                 
 
             }
@@ -271,7 +277,7 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     if (seq > 1) {
         return 1;     
     }
-
+    
     int packet_len = 0; // Length of created packet
     uint8_t CRC = 0;    // CRC for packet
     
