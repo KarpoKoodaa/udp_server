@@ -46,12 +46,14 @@ crc crcTable[256];
 int main(int argc, char* argv[]) {
     
     // Probability variables for packet drops and delays
-    double drop_prob = 0.0;
-    double delay_prob = 0.0;
+    double drop_probability = 0.0;
+    double delay_probability = 0.0;
     int delay_ms = 0;
-    double error_probability = 0.1;
+    double error_probability = 0.0;
     unsigned int rdt = 10;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
-    uint8_t seq = 0;                // Sequence
+    uint8_t seq = 0;                // Sequence 
+    int8_t last_seq = -1;          // last_sequence
+
 
     // UDP server port
     char *port = NULL;
@@ -81,25 +83,28 @@ int main(int argc, char* argv[]) {
             break;
         case 'r':
             // Probability for packet drop
-            drop_prob = (double)atof(optarg);
+            drop_probability = (double)atof(optarg);
             break;
         case 'd':
             // Probability for packet delay
-            delay_prob = (double)atof(optarg);
+            delay_probability = (double)atof(optarg);
             break;
         case 't':
             // Delay is ms
             delay_ms = atoi(optarg);
             break;
+        case 'v':
+            error_probability = (double)atof(optarg);
+            break;
         default:
-            fprintf(stderr, "Usage: %s -p port -d delay_prob -r drop_prob -t delay_ms\n",
+            fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
                            argv[0]);
             return 1;
             break;
         }
     }
 
-    printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt, port, drop_prob, delay_prob, delay_ms);
+    printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt, port, drop_probability, delay_probability, delay_ms);
 
 
     // Precompute CRC8 table for fastCRC
@@ -159,13 +164,17 @@ int main(int argc, char* argv[]) {
             /* VIRTUAL SOCKET BEGINS */
 
             // Drop packet
-            if (rand_number() <= drop_prob) {
+            if (rand_number() <= drop_probability) {
+                printf("\033[0;31m");
                 printf("Packet dropped\n");
+                printf("\033[0m");
             }
             else {
                 // Add delay   
-                if (rand_number() <= delay_prob) {
+                if (rand_number() <= delay_probability) {
+                    printf("\033[0;31m");
                     printf("Delay added\n");
+                    printf("\033[0m");
                     msleep(delay_ms);
                 }
                 // Add bit error
@@ -186,7 +195,20 @@ int main(int argc, char* argv[]) {
                 if (rdt == 22) {
                     if (read[0] == 0) seq = 0;
                     else if (read[0] == 1) seq = 1;
-            }
+                }
+                if (rdt == 30) {
+                    if (last_seq == seq) {
+                        // Duplicate
+                        printf("\033[0;31m");
+                        printf("Duplicate packet\n");
+                        printf("\033[0m");
+                        seq = last_seq;
+                    }
+                    else {
+                        if (read[0] == 0) seq = 0;
+                        else if (read[0] == 1) seq = 1;
+                    }
+                }
 
                 crc result = crcFast(data, bytes_received);
 
@@ -221,35 +243,13 @@ int main(int argc, char* argv[]) {
                 
                 printf("Result is %d\n", result);
                 if (result != 0) {
-                    printf("Sending: CRC:%x, Packet size: %d\n", packet[3], packet_len);
+                    printf("Sent: CRC:%x, Packet size: %d\n", packet[3], packet_len);
                     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
                 }
                 printf("Packet: %s\n", packet);
                 
-                printf("Sending v%1.1f: CRC: %x, size: %d\n", (float)rdt/10, packet[3], packet_len);
+                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt/10, packet[0], packet[3], packet_len);
                 sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                
-                // if (rdt == 0 && !result)
-                // {
-                    
-                //     printf("Sending. CRC: %x, size: %d\n", packet[3], packet_len);
-                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                // }
-                // else if (rdt == 10 && result == 0) {
-                    
-                //     printf("Sending v1.0. CRC: %x, size: %d\n", packet[3], packet_len);
-                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                // }
-                // else if ((rdt == 20 || rdt == 21) && result == 0) {
-                    
-                //     printf("Sending v2.0 or v2.1: . CRC: %x, size: %d\n", packet[3], packet_len);
-                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                // }
-                // else if (rdt == 22 && result == 0) {
-                //     printf("Sending v2.2: len: %d %s\n", packet_len, packet);
-                //     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
-                // }
-                
 
             }
             
@@ -263,19 +263,36 @@ int main(int argc, char* argv[]) {
 
 } /* main() */
 
-// TODO: brief, descriptions & etc
-/* 
-    RDT packets:
-    RDT1.0 = no ACK/NAK // Handled in main as no ACK/NAK
-    RDT2.0 = ACK/NAK + (CHECKSUM?)
-    RDT2.1 = ACK/NAK+CHECKSUM
-    RDT2.2 = ACK/NAK+SEQ+CHECKSUM
-
-*/
+/**
+ * @brief Creates a packet based on the specified rdt version, sequence number, and result.
+ *
+ * This function constructs a packet with a specific format depending on the rdt version provided.
+ * The packet contains acknowledgment (ACK/NAK) and a CRC value for integrity checking.
+ *
+ * @param[out] packet Pointer to a buffer where the created packet will be stored.
+ * @param[in]  version Protocol version (e.g., 20, 21, 22, or 30 ) that determines the packet format.
+ * @param[in]  seq Sequence number (0 or 1) used in the packet. Must not exceed 1.
+ * @param[in]  result Result status (0 for success, non-zero for failure) influencing the ACK/NAK decision.
+ * 
+ * @return Length of the created packet on success, 
+ *          and `-1` if error occurred
+ * @note For `version == 22` and `seq == 1`, the CRC is hardcoded to 0x69 as per test app behavior.
+ *
+ * ### Packet Formats:
+ * - **Version 20, 21**:
+ *   - On success (`result == 0`): `"ACK<CRC>"`
+ *   - On failure (`result != 0`): `"NAK<CRC>"`
+ * - **Version 22**:
+ *   - On success (`result == 0`): `"<seq>ACK<CRC>"`
+ *   - On failure (`result != 0`): `"<seq>NAK<CRC>"`
+ *
+ * ### Error Handling:
+ * - If error occurs, the function returns `-1` 
+ */
 int make_packet(char *packet, int version, uint8_t seq, int result) {
 
     if (seq > 1) {
-        return 1;     
+        return -1;     
     }
     
     int packet_len = 0; // Length of created packet
@@ -298,7 +315,7 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
         return packet_len;
     }
     // Packet example: SEQ:ACK:CRC
-    else if (version == 22) {
+    else if (version == 22 || version == 30) {
         if (!result) {
             
             // This is strange. The test app responses ACK with CRC 69, if sequence is 1
@@ -319,5 +336,5 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     }
        
 
-    return 0;
+    return -1;
 } /* make_packet */
