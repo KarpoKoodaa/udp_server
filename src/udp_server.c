@@ -37,19 +37,26 @@
 
 #define DEFAULT_PORT   "6666"
 
+typedef struct Rdt_variables
+{
+    /* data */
+    float drop_probability;
+    float delay_probability;
+    float error_probability;
+    uint16_t delay_ms;
+    uint16_t rdt;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
+} Rdt_variables;
+
+
 int make_packet(char *packet, int version, uint8_t seq, int result);
 SOCKET configure_socket(struct addrinfo *bind_address);
+bool process_packet(char *read, size_t bytes_received, struct Rdt_variables);
 
 crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
     // Probability variables for packet drops and delays
-    double drop_probability = 0.0;
-    double delay_probability = 0.0;
-    int delay_ms = 0;
-    double error_probability = 0.0;
-    unsigned int rdt = 10;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
     uint8_t seq = 0;                // Sequence 
     int8_t last_seq = -1;          // last_sequence
 
@@ -57,10 +64,12 @@ int main(int argc, char* argv[]) {
     // UDP server port
     char *port = NULL;
     port = DEFAULT_PORT;
-    
+    Rdt_variables rdt_vars = {0, 0, 0, 0, 10}; 
     int c = 0;
     opterr = 0;
     float rdt_version = 0;
+
+    
 
     // Parse command line arguments
     while((c = getopt(argc, argv, "x:p:d:r:t:v:")) != -1) {
@@ -74,7 +83,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             rdt_version = atof(optarg) * 10;
-            rdt = (int)rdt_version;
+            rdt_vars.rdt = (uint16_t)rdt_version;
             break;
         case 'p':
             // Port
@@ -82,18 +91,18 @@ int main(int argc, char* argv[]) {
             break;
         case 'r':
             // Probability for packet drop
-            drop_probability = (double)atof(optarg);
+            rdt_vars.drop_probability = atof(optarg);
             break;
         case 'd':
             // Probability for packet delay
-            delay_probability = (double)atof(optarg);
+            rdt_vars.delay_probability = atof(optarg);
             break;
         case 't':
             // Delay is ms
-            delay_ms = atoi(optarg);
+            rdt_vars.delay_ms = atoi(optarg);
             break;
         case 'v':
-            error_probability = (double)atof(optarg);
+            rdt_vars.error_probability = (double)atof(optarg);
             break;
         default:
             fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
@@ -103,7 +112,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt, port, drop_probability, delay_probability, delay_ms);
+    printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt_vars.rdt, port,
+                                                                                                        rdt_vars.drop_probability, rdt_vars.delay_probability,
+                                                                                                        rdt_vars.delay_ms);
 
 
     // Precompute CRC8 table for fastCRC
@@ -121,18 +132,6 @@ int main(int argc, char* argv[]) {
 
     printf("Creating socket...\n");
     SOCKET socket_listen = configure_socket(bind_address);
-    // socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
-    // if(!ISVALIDSOCKET(socket_listen)) {
-    //     fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
-    //     return 1;
-    // }
-
-    // printf("Binding socket to local address...\n");
-    // if (bind (socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) {
-    //     fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
-    //     return 1;
-    // }
-    // freeaddrinfo(bind_address);
 
     fd_set master;
     FD_ZERO(&master);
@@ -162,25 +161,32 @@ int main(int argc, char* argv[]) {
 
             /* VIRTUAL SOCKET BEGINS */
 
+            bool packet_dropped = process_packet(read, bytes_received, rdt_vars);
             // Drop packet
-            if (rand_number() <= drop_probability) {
-                printf("\033[0;31m");
-                printf("Packet dropped\n");
-                printf("\033[0m");
-            }
+            if (packet_dropped) {
+                continue;
+            } 
             else {
-                // Add delay   
-                if (rand_number() <= delay_probability) {
-                    printf("\033[0;31m");
-                    printf("Delay added\n");
-                    printf("\033[0m");
-                    msleep(delay_ms);
-                }
-                // Add bit error
-                if (rand_number() <= error_probability) {
-                    char mask = 0x2;
-                    read[bytes_received-2] = read[bytes_received-2] ^ mask;
-                }
+
+            
+            // if (rand_number() <= drop_probability) {
+            //     printf("\033[0;31m");
+            //     printf("Packet dropped\n");
+            //     printf("\033[0m");
+            // }
+            // else {
+            //     // Add delay   
+            //     if (rand_number() <= delay_probability) {
+            //         printf("\033[0;31m");
+            //         printf("Delay added\n");
+            //         printf("\033[0m");
+            //         msleep(delay_ms);
+            //     }
+            //     // Add bit error
+            //     if (rand_number() <= error_probability) {
+            //         char mask = 0x2;
+            //         read[bytes_received-2] = read[bytes_received-2] ^ mask;
+            //     }
                
                 // Print the CRC-8
                 printf("First byte: %x\n", (unsigned char) read[0]);
@@ -191,11 +197,11 @@ int main(int argc, char* argv[]) {
                 }
                 data[bytes_received] = '\0';
 
-                if (rdt == 22) {
+                if (rdt_vars.rdt == 22) {
                     if (read[0] == 0) seq = 0;
                     else if (read[0] == 1) seq = 1;
                 }
-                if (rdt == 30) {
+                if (rdt_vars.rdt == 30) {
                     if (last_seq == seq) {
                         // Duplicate
                         printf("\033[0;31m");
@@ -220,10 +226,10 @@ int main(int argc, char* argv[]) {
                 int packet_len = 0;
 
                 // If RDT 1.0, no ACK/NAK 
-                if (rdt == 10) {
+                if (rdt_vars.rdt == 10) {
                     continue;
                 }
-                packet_len = make_packet(packet, rdt, seq, result);
+                packet_len = make_packet(packet, rdt_vars.rdt, seq, result);
                 // TODO: What is smallest packet here? Probably 4, but returns 0 if fails
                 if (packet_len < 1) {
                     fprintf(stderr, "Error creating packet\n");
@@ -247,7 +253,7 @@ int main(int argc, char* argv[]) {
                 }
                 printf("Packet: %s\n", packet);
                 
-                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt/10, packet[0], packet[3], packet_len);
+                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[3], packet_len);
                 sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
 
             }
@@ -263,7 +269,7 @@ int main(int argc, char* argv[]) {
 } /* main() */
 
 /**
- * @brief Creates a packet based on the specified rdt version, sequence number, and result.
+ * @brief Creates a packet based on the specified rdt_vars.rdt version, sequence number, and result.
  *
  * This function constructs a packet with a specific format depending on the rdt version provided.
  * The packet contains acknowledgment (ACK/NAK) and a CRC value for integrity checking.
@@ -360,3 +366,29 @@ SOCKET configure_socket(struct addrinfo *bind_address)
 
 
 } /* configure_socket */
+
+bool process_packet(char *read, size_t bytes_received, Rdt_variables vars)
+{
+    if (rand_number() <= vars.drop_probability) {
+        printf("\033[0;31m");
+        printf("Packet dropped\n");
+        printf("\033[0m");
+        return true;
+    }
+    else {
+    // Add delay   
+        if (rand_number() <= vars.delay_probability) {
+            printf("\033[0;31m");
+            printf("Delay added\n");
+            printf("\033[0m");
+            msleep(vars.delay_ms);
+        }
+        // Add bit error
+        if (rand_number() <= vars.error_probability) {
+            char mask = 0x2;
+            read[bytes_received-2] = read[bytes_received-2] ^ mask;
+        }
+    }
+               
+    return false;
+}
