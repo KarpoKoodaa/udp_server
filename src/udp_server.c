@@ -168,26 +168,6 @@ int main(int argc, char* argv[]) {
             } 
             else {
 
-            
-            // if (rand_number() <= drop_probability) {
-            //     printf("\033[0;31m");
-            //     printf("Packet dropped\n");
-            //     printf("\033[0m");
-            // }
-            // else {
-            //     // Add delay   
-            //     if (rand_number() <= delay_probability) {
-            //         printf("\033[0;31m");
-            //         printf("Delay added\n");
-            //         printf("\033[0m");
-            //         msleep(delay_ms);
-            //     }
-            //     // Add bit error
-            //     if (rand_number() <= error_probability) {
-            //         char mask = 0x2;
-            //         read[bytes_received-2] = read[bytes_received-2] ^ mask;
-            //     }
-               
                 // Print the CRC-8
                 printf("First byte: %x\n", (unsigned char) read[0]);
                 printf("Received CRC: %x\n", (unsigned char)read[bytes_received-1]);
