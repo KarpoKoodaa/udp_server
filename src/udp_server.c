@@ -9,16 +9,14 @@
  * Permission tba
  *******************************************/
 
-// 
+// Standard Headers 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
-// Getopt
 #include <ctype.h>
 
-// Network 
+// Networking Headers
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -27,7 +25,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-// Locals
+// Local Headers
 #include "../include/sleep.h"
 #include "../include/rdn_num.h"
 #include "../include/crc.h"
@@ -40,6 +38,7 @@
 #define DEFAULT_PORT   "6666"
 
 int make_packet(char *packet, int version, uint8_t seq, int result);
+SOCKET configure_socket(struct addrinfo *bind_address);
 
 crc crcTable[256];
 
@@ -121,19 +120,19 @@ int main(int argc, char* argv[]) {
     getaddrinfo(0, port, &hints, &bind_address);  
 
     printf("Creating socket...\n");
-    SOCKET socket_listen;
-    socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
-    if(!ISVALIDSOCKET(socket_listen)) {
-        fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
-        return 1;
-    }
+    SOCKET socket_listen = configure_socket(bind_address);
+    // socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
+    // if(!ISVALIDSOCKET(socket_listen)) {
+    //     fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
+    //     return 1;
+    // }
 
-    printf("Binding socket to local address...\n");
-    if (bind (socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) {
-        fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
-        return 1;
-    }
-    freeaddrinfo(bind_address);
+    // printf("Binding socket to local address...\n");
+    // if (bind (socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) {
+    //     fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
+    //     return 1;
+    // }
+    // freeaddrinfo(bind_address);
 
     fd_set master;
     FD_ZERO(&master);
@@ -221,7 +220,7 @@ int main(int argc, char* argv[]) {
                 int packet_len = 0;
 
                 // If RDT 1.0, no ACK/NAK 
-                if (rdt == 1) {
+                if (rdt == 10) {
                     continue;
                 }
                 packet_len = make_packet(packet, rdt, seq, result);
@@ -338,3 +337,26 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
 
     return -1;
 } /* make_packet */
+
+
+SOCKET configure_socket(struct addrinfo *bind_address)
+{
+
+    SOCKET socket_listen;
+    socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
+    if(!ISVALIDSOCKET(socket_listen)) {
+        fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
+        return 1;
+    }
+
+    printf("Binding socket to local address...\n");
+    if (bind (socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) {
+        fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
+        return 1;
+    }
+    freeaddrinfo(bind_address);
+
+    return socket_listen;
+
+
+} /* configure_socket */
