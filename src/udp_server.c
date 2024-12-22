@@ -216,6 +216,7 @@ int main(int argc, char* argv[]) {
                     continue;
                 }
                 printf("Packet size: %lu\n", sizeof(packet));
+                printf("Packet len: %d\n", packet_len);
                 printf("Remote address is: ");
                 char address_buffer[100];
                 char service_buffer[100];
@@ -228,7 +229,7 @@ int main(int argc, char* argv[]) {
                 
                 printf("Result is %d\n", result);
                 if (result != 0) {
-                    printf("Sent: CRC:%x, Packet size: %d\n", packet[3], packet_len);
+                    printf("Sent: CRC:%x, Packet size: %d\n", packet[packet_len - 1], packet_len);
                     sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
                 }
                 printf("Packet: %s\n", packet);
@@ -267,7 +268,7 @@ int main(int argc, char* argv[]) {
  * - **Version 20, 21**:
  *   - On success (`result == 0`): `"ACK<CRC>"`
  *   - On failure (`result != 0`): `"NAK<CRC>"`
- * - **Version 22**:
+ * - **Version 22, 30**:
  *   - On success (`result == 0`): `"<seq>ACK<CRC>"`
  *   - On failure (`result != 0`): `"<seq>NAK<CRC>"`
  *
@@ -280,48 +281,34 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
         return -1;     
     }
     
-    int packet_len = 0; // Length of created packet
+    int packet_len = -1; // Length of created packet
     uint8_t CRC = 0;    // CRC for packet
-    
-    // Packet example: ACKCRC
+    if (result == 0 && seq == 1) {
+        // This is strange. The test app responses ACK with CRC 69, if sequence is 1
+        CRC = 0x69;
+    }
+    else if (result == 0) {
+        CRC = 0x7f;
+    }
+    else if (result == 1){
+        CRC = 0x12;
+    }
+
+    char *ack = (result == 0 ? "ACK" : "NAK");
+
     if (version == 20 || version == 21) {
-        if (!result) {
-            CRC = 0x7f;
-            snprintf(packet, sizeof(packet),"ACK%c", CRC);
-            packet_len = snprintf(packet, sizeof(packet),"ACK%c", CRC);
-            
-        }
-        else {
-            CRC = 0x12;
-            snprintf(packet, sizeof(packet),"NAK%c", CRC);
-            packet_len = snprintf(packet, sizeof(packet),"ACK%c", CRC);
-            
-        }
-        return packet_len;
+        snprintf(packet, sizeof(packet), "%s%c", ack, CRC);
+        printf("Packet is %s\n", packet);
+        packet_len = snprintf(packet, sizeof(packet),"%s%c", ack, CRC);
+
     }
-    // Packet example: SEQ:ACK:CRC
     else if (version == 22 || version == 30) {
-        if (!result) {
-            
-            // This is strange. The test app responses ACK with CRC 69, if sequence is 1
-            if ( seq == 1){
-                CRC = 0x69;
-            } else CRC = 0x7f;
+        snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);
+        packet_len = snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);            
 
-            snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC);
-            packet_len = snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC);            
-        }
-        else {
-            CRC = 0x12;
-            snprintf(packet, sizeof(packet), "%cNAK%c", seq, CRC);
-            packet_len = snprintf(packet, sizeof(packet), "%cACK%c", seq, CRC); 
-            
-        }
-        return packet_len;
     }
-       
-
-    return -1;
+    return packet_len;
+    
 } /* make_packet */
 
 
