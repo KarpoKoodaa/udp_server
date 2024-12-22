@@ -56,7 +56,6 @@ crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
-    // Probability variables for packet drops and delays
     uint8_t seq = 0;                // Sequence 
     int8_t last_seq = -1;          // last_sequence
 
@@ -68,8 +67,6 @@ int main(int argc, char* argv[]) {
     int c = 0;
     opterr = 0;
     float rdt_version = 0;
-
-    
 
     // Parse command line arguments
     while((c = getopt(argc, argv, "x:p:d:r:t:v:")) != -1) {
@@ -105,6 +102,7 @@ int main(int argc, char* argv[]) {
             rdt_vars.error_probability = (double)atof(optarg);
             break;
         default:
+            // TODO: Update Usage with error probability
             fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
                            argv[0]);
             return 1;
@@ -311,7 +309,8 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     
 } /* make_packet */
 
-
+// TODO: Add the hints part here as well
+// TODO: Add doxygen 
 SOCKET configure_socket(struct addrinfo *bind_address)
 {
 
@@ -334,6 +333,7 @@ SOCKET configure_socket(struct addrinfo *bind_address)
 
 } /* configure_socket */
 
+// TODO: Add doxygen
 bool process_packet(char *read, size_t bytes_received, Rdt_variables vars)
 {
     if (rand_number() <= vars.drop_probability) {
@@ -342,6 +342,7 @@ bool process_packet(char *read, size_t bytes_received, Rdt_variables vars)
         printf("\033[0m");
         return true;
     }
+    // TODO: Remove else 
     else {
     // Add delay   
         if (rand_number() <= vars.delay_probability) {
@@ -358,4 +359,4 @@ bool process_packet(char *read, size_t bytes_received, Rdt_variables vars)
     }
                
     return false;
-}
+} /* process_packet */

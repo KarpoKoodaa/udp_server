@@ -6,8 +6,7 @@ udp_server for school task
 
 
 ### TODO
-- Continue with Reliable data transfer with only positive ACKs
-- Reliable data transfer with only negative ACKs
+- Check if we need to send NAK when bit error detected.
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
