@@ -200,7 +200,8 @@ int main(int argc, char* argv[]) {
                                 
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
                 
-                char packet[8] = {0};
+                char packet[8];
+                memset(packet, 0, sizeof(packet));
                 int packet_len = 0;
 
                 // If RDT 1.0, no ACK/NAK 
@@ -213,7 +214,7 @@ int main(int argc, char* argv[]) {
                     fprintf(stderr, "Error creating packet\n");
                     continue;
                 }
-                printf("Packet size: %lu\n", sizeof(packet));
+                printf("Packet size: %u\n", sizeof(packet));
                 printf("Packet len: %d\n", packet_len);
                 printf("Remote address is: ");
                 char address_buffer[100];
@@ -228,11 +229,11 @@ int main(int argc, char* argv[]) {
                 printf("Result is %d\n", result);
                 if (result != 0) {
                     printf("Sent: CRC:%x, Packet size: %d\n", packet[packet_len - 1], packet_len);
-                    sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
+                    sendto(socket_listen, packet, strlen(packet), 0, (struct sockaddr*)&client_address, client_len);
                 }
-                printf("Packet: %s\n", packet);
+                printf("Packet: %x%c%c%c%x\n", packet[0],packet[1], packet[2], packet[3], packet[4]);
                 
-                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[3], packet_len);
+                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[4], packet_len);
                 sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
 
             }
@@ -295,14 +296,17 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     char *ack = (result == 0 ? "ACK" : "NAK");
 
     if (version == 20 || version == 21) {
-        snprintf(packet, sizeof(packet), "%s%c", ack, CRC);
+        size_t size = snprintf(NULL, 0, "%s%x", ack, CRC);
+        snprintf(packet, size, "%s%c", ack, CRC);
         printf("Packet is %s\n", packet);
-        packet_len = snprintf(packet, sizeof(packet),"%s%c", ack, CRC);
+        packet_len = snprintf(packet, size,"%s%x", ack, CRC);
 
     }
     else if (version == 22 || version == 30) {
-        snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);
-        packet_len = snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);            
+        size_t size = snprintf(NULL, 0, "%c%s%x",seq, ack, CRC);
+        printf("Size is %u\n", size);
+        snprintf(packet, size, "%c%s%x", seq, ack, CRC);
+        packet_len = snprintf(packet, size, "%c%s%x", seq, ack, CRC);            
 
     }
     return packet_len;
