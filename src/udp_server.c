@@ -318,6 +318,7 @@ SOCKET configure_socket(struct addrinfo *bind_address)
     socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
     if(!ISVALIDSOCKET(socket_listen)) {
         fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
+        // TODO: Cannot return 1!!
         return 1;
     }
 
