@@ -214,7 +214,7 @@ int main(int argc, char* argv[]) {
                     fprintf(stderr, "Error creating packet\n");
                     continue;
                 }
-                printf("Packet size: %u\n", sizeof(packet));
+                //printf("Packet size: %lu\n", sizeof(packet));
                 printf("Packet len: %d\n", packet_len);
                 printf("Remote address is: ");
                 char address_buffer[100];
@@ -304,7 +304,7 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
     }
     else if (version == 22 || version == 30) {
         size_t size = snprintf(NULL, 0, "%c%s%x",seq, ack, CRC);
-        printf("Size is %u\n", size);
+        //printf("Size is %u\n", size);
         snprintf(packet, size, "%c%s%x", seq, ack, CRC);
         packet_len = snprintf(packet, size, "%c%s%x", seq, ack, CRC);            
 
