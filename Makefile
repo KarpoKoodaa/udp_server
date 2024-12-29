@@ -10,7 +10,6 @@ CC := gcc
 CC_FLAGS := -I${INC_DIR} -Wall -Wextra -Wpedantic -Werror -Wshadow -Wformat=2  -Wunused-parameter -g
 
 EXE := $(BUILD_DIR)/udp-server 
-EXE1 := $(BUILD_DIR)/gbn_server
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.0)
 
@@ -25,8 +24,8 @@ $(EXE): $(BUILD_DIR)
 $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
-gbn: $(BUILD_DIR)  
-	$(CC) $(CC_FLAGS) -o $@  $(SRC_DIR)/gbn_server.c $(SRC_DIR)/crc.c
+#gbn: $(BUILD_DIR)  
+#	$(CC) $(CC_FLAGS) -o $@  $(SRC_DIR)/gbn_server.c $(SRC_DIR)/crc.c
 
 
 clean:
