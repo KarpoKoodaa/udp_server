@@ -22,9 +22,13 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 // Local Headers
 #include "../include/crc.h"
+
+void timeout_alarm(__attribute__((unused))int ignore);
+int make_packet (int next_sequence, char *data, crc packet_crc);
 
 #define ISVALIDSOCKET(s)    ((s) >= 0)
 #define CLOSESOCKET(s)      close(s)
@@ -36,6 +40,7 @@
 #define TIMEOUT_SECONDS      5
 
 int g_tries = 0;
+crc crcTable[256];
 
 
 int main(void)
@@ -45,11 +50,16 @@ int main(void)
     struct sigaction my_timeout;
 
     my_timeout.sa_handler = timeout_alarm;
-    if (sigfillset(&my_timeout.sa_mask) < 0)){
+    if (sigfillset(&my_timeout.sa_mask) < 0){
         fprintf(stderr, "sigfillset failed\n");
         return 1;
     }
     my_timeout.sa_flags = 0;
+
+    if (sigaction (SIGALRM, &my_timeout, 0) < 0) {
+        fprintf(stderr, "sigaction() failed.\n");
+        return 1;
+    }
 
 
     // Initialize fastCRC
@@ -88,7 +98,7 @@ int main(void)
         return 1;
     }
 
-    freeaddrinfo(peer_address);
+
 
     printf("Connected.\n");
 
@@ -96,21 +106,19 @@ int main(void)
 
     printf("Ready to send data to server\n");
 
-    int i = 0;
-
-
 
     // GBN Client begins
 
     int packet_received = 0;
     int packet_sent = 0;
     int next_seq_num = 1;
-    int window_size = 10;       // TODO: Needs to be received command line argumets
+    int window_size = 5;       // TODO: Needs to be received command line argumets
     int base = 1;
-    char *packet[window_size];            // Most likely needs to be struct or char **
+    // char *packet[window_size];            // Most likely needs to be struct or char **
     char recv_packet[4096];
 
-    while (packet_received < packet_sent && g_tries < MAXTRIES) {
+    do {
+    
 
         fd_set reads;
         FD_ZERO(&reads);
@@ -133,18 +141,19 @@ int main(void)
                 printf("Connection close by peer\n");
                 break;
             }
-            printf("Received (%d bytes): %.*s\n", bytes_received, bytes_received, packet_received);
+            printf("Received (%d bytes): %.*s\n", bytes_received, (int)bytes_received, recv_packet);
 
             // TODO: CRC check of data
-            char *data = malloc(sizeof(char) * bytes_received + 1);
+            crc *data = malloc(sizeof(char) * bytes_received + 1);
             for (long i = 0; i < bytes_received; i++) {
                 data[i] = recv_packet[i];
             }
             data[bytes_received] = '\0';
-
+            printf("Received data: %x %s\n", data[0], &data[1]);
             crc crc_result = crcFast(data, bytes_received);
 
             if (crc_result == 0) {
+                printf("Packet ok\n");
                 base = recv_packet[0];
                 base++;
                 if (base == next_seq_num) alarm(0);
@@ -154,37 +163,53 @@ int main(void)
             else if (crc_result != 0) {
                 printf("Packet error!\n");
             }
+            free(data);
             
         }
 
         // Send data
-        if (FD_ISSET(0, &reads)) {
+        //if (FD_ISSET(0, &reads)) {
             if (next_seq_num < (base + window_size)) {
-                int size = packet[next_seq_num] = make_packet(next_seq_num, data, crc);
+                // int bytes_outgoing = 13;
+                char *message = "Hello World%";
+                // crc *outgoing_data = malloc(sizeof(char)* bytes_outgoing + 1);
+                // crc packet_crc = crcFast(outgoing_data, bytes_outgoing);
+                // crc packet_crc = crcFast(message, bytes_outgoing);
+                
+                // size_t size = make_packet(next_seq_num, packet[next_seq_num], packet_crc);
+
                 // send or sendto
-                int bytes_sent = send(socket_peer, packet, size, 0);
+                printf("Sending data.....\n");
+                // int bytes_sent = sendto(socket_peer, message, strlen(message), 0, peer_address->ai_addr, peer_address->ai_addrlen);
+                int bytes_sent = send(socket_peer, message, strlen(message), 0);
                 if (base == next_seq_num) {
                     alarm(TIMEOUT_SECONDS);
                 }
+                if (bytes_sent < 1) {
+                    fprintf(stderr, "Error occurred\n");
+                    break;
+                }
+                // free(outgoing_data);
                 next_seq_num++;
                 packet_sent++;
             }
-        }
+        //}
 
         
         // Receive da
-        else {
-            // Wait until more window is open
-            // To be considered if something needed here...
-        }
-    }
+        // else {
+        //     // Wait until more window is open
+        //     // To be considered if something needed here...
+        // }
+    } while (packet_received < packet_sent && g_tries < MAXTRIES);
 
     // const char *message = "Hello World";
     
     // printf("Sending: %s\n", message);
     // int bytes_sent = sendto(socket_peer, message, strlen(message), 0, peer_address->ai_addr, peer_address->ai_addrlen);
     // printf("Sent %d bytes\n", bytes_sent);
-
+    freeaddrinfo(peer_address);
+    printf("Tries: %d Packets sent: %d Packets received: %d next seq num: %d\n", g_tries, packet_sent, packet_received, next_seq_num);
     CLOSESOCKET(socket_peer);
 
     printf("Finished\n");
@@ -193,8 +218,20 @@ int main(void)
 }
 
 
-void timeout_alarm(int ignored) 
+void timeout_alarm(__attribute__((unused)) int ignore)
 {
     g_tries++;
 
+}
+
+int make_packet (int next_sequence, char *data, crc packet_crc)
+{
+
+    if (next_sequence < 0) {
+        return -1;
+    }
+
+    size_t len = snprintf(NULL, 0, "%s%x", data, packet_crc);
+
+    return len;
 }
