@@ -9,17 +9,24 @@ BUILD_DIR := ./build
 CC := gcc
 CC_FLAGS := -I${INC_DIR} -Wall -Wextra -Wpedantic -Werror -Wshadow -Wformat=2  -Wunused-parameter -g
 
-EXE := $(BUILD_DIR)/udp-server 
+EXEC := $(BUILD_DIR)/udp-server 
+EXEC2 := $(BUILD_DIR)/gbn-client
 SRC := $(wildcard $(SRC_DIR)/*.c)
-OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.0)
+EXEC_SRC := ./src/udp_server.c ./src/crc.c ./src/sleep.c ./src/rdn_num.c ./src/rdt.c
+EXEC2_SRC := ./src/udp_client.c ./src/crc.c
+OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # Rules
 .PHONY: all clean
 
-all: $(EXE)
+all: $(EXEC) $(EXEC2)
 
-$(EXE): $(BUILD_DIR)
-		$(CC) $(CC_FLAGS) -o $@ ${SRC}
+$(EXEC): $(BUILD_DIR)
+	$(CC) $(CC_FLAGS) -o $@ $(EXEC_SRC) 
+# $(CC) $(CC_FLAGS) -o $@ ${SRC}
+
+$(EXEC2): $(BUILD_DIR)
+	$(CC) $(CC_FLAGS) -o $@ $(EXEC2_SRC) 
 
 $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@

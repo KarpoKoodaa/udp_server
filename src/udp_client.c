@@ -112,7 +112,7 @@ int main(void)
     int packet_received = 0;
     int packet_sent = 0;
     int next_seq_num = 1;
-    int window_size = 5;       // TODO: Needs to be received command line argumets
+    int window_size = 10;       // TODO: Needs to be received command line argumets
     int base = 1;
     // char *packet[window_size];            // Most likely needs to be struct or char **
     char recv_packet[4096];
@@ -209,7 +209,7 @@ int main(void)
     // int bytes_sent = sendto(socket_peer, message, strlen(message), 0, peer_address->ai_addr, peer_address->ai_addrlen);
     // printf("Sent %d bytes\n", bytes_sent);
     freeaddrinfo(peer_address);
-    printf("Tries: %d Packets sent: %d Packets received: %d next seq num: %d\n", g_tries, packet_sent, packet_received, next_seq_num);
+    printf("Tries: %d \t Packets sent: %d \t Packets received: %d \t next seq num: %d\n", g_tries, packet_sent, packet_received, next_seq_num);
     CLOSESOCKET(socket_peer);
 
     printf("Finished\n");
