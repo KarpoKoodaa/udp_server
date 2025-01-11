@@ -28,7 +28,7 @@
 #include "../include/crc.h"
 
 void timeout_alarm(__attribute__((unused))int ignore);
-int make_packet (int next_sequence, char *data, crc packet_crc);
+int make_packet (uint8_t next_sequence, char *data, crc packet_crc, char *packet);
 
 #define ISVALIDSOCKET(s)    ((s) >= 0)
 #define CLOSESOCKET(s)      close(s)
@@ -111,7 +111,7 @@ int main(void)
 
     int packet_received = 0;
     int packet_sent = 0;
-    int next_seq_num = 1;
+    uint8_t next_seq_num = 1;
     int window_size = 10;       // TODO: Needs to be received command line argumets
     int base = 1;
     // char *packet[window_size];            // Most likely needs to be struct or char **
@@ -149,7 +149,7 @@ int main(void)
                 data[i] = recv_packet[i];
             }
             data[bytes_received] = '\0';
-            printf("Received data: %x %s\n", data[0], &data[1]);
+            printf("Received data: %x%s\n", data[0], &data[1]);
             crc crc_result = crcFast(data, bytes_received);
 
             if (crc_result == 0) {
@@ -171,17 +171,34 @@ int main(void)
         //if (FD_ISSET(0, &reads)) {
             if (next_seq_num < (base + window_size)) {
                 // int bytes_outgoing = 13;
-                char *message = "Hello World%";
+                char *message = "Hello World";
                 // crc *outgoing_data = malloc(sizeof(char)* bytes_outgoing + 1);
                 // crc packet_crc = crcFast(outgoing_data, bytes_outgoing);
                 // crc packet_crc = crcFast(message, bytes_outgoing);
                 
                 // size_t size = make_packet(next_seq_num, packet[next_seq_num], packet_crc);
+                char seq_message[100];
+                snprintf(seq_message, sizeof seq_message, "%x%s", next_seq_num, message); 
+                crc *data_to_send = malloc(sizeof(char) * strlen(message)  + 1);
+                int len = strlen(seq_message);
+
+
+                for (long i = 0; i < len; i++) {
+                    data_to_send[i] = seq_message[i];
+                }
+                data_to_send[len] = '\0';
+                
+                // TODO: CRC needs to take account the sequence number
+                
+                crc crc_send = crcFast(data_to_send, len);
+                char *packet = malloc(sizeof(char) * (strlen(message) + 1));
+                int size = make_packet(next_seq_num, message, crc_send, packet);
 
                 // send or sendto
                 printf("Sending data.....\n");
                 // int bytes_sent = sendto(socket_peer, message, strlen(message), 0, peer_address->ai_addr, peer_address->ai_addrlen);
-                int bytes_sent = send(socket_peer, message, strlen(message), 0);
+                // int bytes_sent = send(socket_peer, message, strlen(message), 0);
+                int bytes_sent = send(socket_peer, packet, size, 0);
                 if (base == next_seq_num) {
                     alarm(TIMEOUT_SECONDS);
                 }
@@ -190,6 +207,7 @@ int main(void)
                     break;
                 }
                 // free(outgoing_data);
+                free (packet);
                 next_seq_num++;
                 packet_sent++;
             }
@@ -224,14 +242,15 @@ void timeout_alarm(__attribute__((unused)) int ignore)
 
 }
 
-int make_packet (int next_sequence, char *data, crc packet_crc)
+int make_packet (uint8_t next_sequence, char *data, crc packet_crc, char *packet)
 {
 
     if (next_sequence < 0) {
         return -1;
     }
 
-    size_t len = snprintf(NULL, 0, "%s%x", data, packet_crc);
+    size_t len = snprintf(NULL, 0, "%x%s%x", next_sequence, data, packet_crc);
+    snprintf(packet, len, "%x%s%x", next_sequence, data, packet_crc);
 
     return len;
 }
