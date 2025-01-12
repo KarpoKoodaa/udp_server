@@ -12,7 +12,7 @@ CC_FLAGS := -I${INC_DIR} -Wall -Wextra -Wpedantic -Werror -Wshadow -Wformat=2  -
 EXEC := $(BUILD_DIR)/udp-server 
 EXEC2 := $(BUILD_DIR)/gbn-client
 SRC := $(wildcard $(SRC_DIR)/*.c)
-EXEC_SRC := ./src/udp_server.c ./src/crc.c ./src/sleep.c ./src/rdn_num.c ./src/rdt.c
+EXEC_SRC := ./src/udp_server.c ./src/crc.c ./src/sleep.c ./src/rdn_num.c ./src/rdt.c ./src/gbn.c
 EXEC2_SRC := ./src/udp_client.c ./src/crc.c
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 

@@ -30,6 +30,7 @@
 #include "../include/rdn_num.h"
 #include "../include/crc.h"
 #include "../include/rdt.h"
+#include "../include/gbn.h"
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
@@ -57,9 +58,11 @@ int main(int argc, char* argv[]) {
     int c = 0;
     opterr = 0;
     float rdt_version = 0;
+    bool gbn = false;
+    int expected_seq_num = 0;
 
     // Parse command line arguments
-    while((c = getopt(argc, argv, "x:p:d:r:t:v:")) != -1) {
+    while((c = getopt(argc, argv, "x:p:d:r:t:v:g")) != -1) {
         switch (c)
         {
         case 'x':
@@ -91,6 +94,10 @@ int main(int argc, char* argv[]) {
         case 'v':
             rdt_vars.error_probability = (double)atof(optarg);
             break;
+        case 'g':
+            gbn = true;
+            rdt = false;
+            break;
         default:
             // TODO: Update Usage with error probability
             fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
@@ -104,9 +111,13 @@ int main(int argc, char* argv[]) {
         printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt_vars.rdt, port,
                                                                                                         rdt_vars.drop_probability, rdt_vars.delay_probability,
                                                                                                         rdt_vars.delay_ms);
+    }
+    if (gbn == true) {
+        printf("Going with GBN!!!\n");
+    }
     // Precompute CRC8 table for fastCRC
         crcInit();
-    }
+    
     
     
     printf("Configuring local address...\n");
@@ -200,6 +211,54 @@ int main(int argc, char* argv[]) {
                 
                 printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[3], packet_len);
                 sendto(socket_listen, packet, packet_len , 0, (struct sockaddr*)&client_address, client_len);
+
+            }
+            else if (gbn == true) {
+
+                printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
+                printf("Packet seq: %x\n", read[0]);
+                bool gbn_result = gbn_process_packet(read, bytes_received, expected_seq_num);
+                
+                if (gbn_result == false) {
+                    printf("GBN result NOK!\n");
+                    break;
+                }
+
+                char gbn_packet[8] = {0};
+                int packet_len = 0;
+
+                packet_len = gbn_make_packet(gbn_packet, expected_seq_num);
+                if (packet_len == -1) {
+                    fprintf(stderr, "ERROR: Create packet failed");
+                    continue;
+                }
+
+                printf("Remote address is: ");
+                char address_buffer[100];
+                char service_buffer[100];
+                getnameinfo(((struct sockaddr*)&client_address),
+                    client_len,
+                    address_buffer, sizeof(address_buffer),
+                    service_buffer, sizeof(service_buffer),
+                    NI_NUMERICHOST | NI_NUMERICSERV);
+                printf("%s %s\n", address_buffer, service_buffer);
+
+                printf("Packet: %x%s\n",gbn_packet[0], &gbn_packet[1]); 
+                sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
+
+
+
+
+
+                
+
+
+                // TODO: send ack if packet ok
+
+
+                // TODO: If expectedseq NOK send ACK for last packet
+
+
 
             }
             

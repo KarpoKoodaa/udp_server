@@ -162,7 +162,7 @@ int main(void)
                 packet_received++;
             }
             else if (crc_result != 0) {
-                printf("Packet error!\n");
+                printf("CRC error!\n");
             }
             free(data);
             
@@ -196,10 +196,10 @@ int main(void)
 
                 // send or sendto
                 printf("Sending data.....\n");
-                // int bytes_sent = sendto(socket_peer, message, strlen(message), 0, peer_address->ai_addr, peer_address->ai_addrlen);
-
+                printf("Data: %s\n", packet);
+                // int bytes_sent = sendto(socket_peer, packet, size, 0, peer_address->ai_addr, peer_address->ai_addrlen);
                 int bytes_sent = send(socket_peer, packet, size, 0);
-                printf("Sent %d bytes. Data: %s\n", bytes_sent, packet);
+
                 if (base == next_seq_num) {
                     alarm(TIMEOUT_SECONDS);
                 }
@@ -208,6 +208,7 @@ int main(void)
                     break;
                 }
                 // free(outgoing_data);
+                printf("Sent %d bytes. Data: %s\n", bytes_sent, packet);
                 free(data_to_send);
                 free (packet);
                 next_seq_num++;
