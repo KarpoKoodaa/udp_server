@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     opterr = 0;
     float rdt_version = 0;
     bool gbn = false;
-    int expected_seq_num = 0;
+    int expected_seq_num = 1;
 
     // Parse command line arguments
     while((c = getopt(argc, argv, "x:p:d:r:t:v:g")) != -1) {
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
         printf("Going with GBN!!!\n");
     }
     // Precompute CRC8 table for fastCRC
-        crcInit();
+    crcInit();
     
     
     
@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
                     break;
                 }
 
-                char gbn_packet[8] = {0};
+                char gbn_packet[10] = {0};
                 int packet_len = 0;
 
                 packet_len = gbn_make_packet(gbn_packet, expected_seq_num);
@@ -243,8 +243,9 @@ int main(int argc, char* argv[]) {
                     NI_NUMERICHOST | NI_NUMERICSERV);
                 printf("%s %s\n", address_buffer, service_buffer);
 
-                printf("Packet: %x%s\n",gbn_packet[0], &gbn_packet[1]); 
+                printf("Packet: %d%s %x\n",gbn_packet[0], &gbn_packet[1], gbn_packet[packet_len]); 
                 sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
+                expected_seq_num++;
 
 
 

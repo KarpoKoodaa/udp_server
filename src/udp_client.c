@@ -116,6 +116,7 @@ int main(void)
     int base = 1;
     // char *packet[window_size];            // Most likely needs to be struct or char **
     char recv_packet[4096];
+    int window = 10;
 
     do {
     
@@ -144,13 +145,18 @@ int main(void)
             printf("Received (%d bytes): %.*s\n", bytes_received, (int)bytes_received, recv_packet);
 
             // TODO: CRC check of data
-            crc *data = malloc(sizeof(char) * bytes_received + 1);
+            char *data = malloc(sizeof(char) * bytes_received + 1);
             for (long i = 0; i < bytes_received; i++) {
                 data[i] = recv_packet[i];
+                printf("data: %hhx\n", data[i]);
             }
             data[bytes_received] = '\0';
             printf("Received data: %x%s\n", data[0], &data[1]);
-            crc crc_result = crcFast(data, bytes_received);
+            printf("Received CRC: %x\n", data[bytes_received - 1]);
+            int len = strlen(data);
+            printf("%d\n", len);
+            crc crc_result = crcFast((crc *)data, bytes_received);
+            printf("CRC Result: %x\n", crc_result);
 
             if (crc_result == 0) {
                 printf("Packet ok\n");
@@ -165,6 +171,7 @@ int main(void)
                 printf("CRC error!\n");
             }
             free(data);
+            window--;
             
         }
 
@@ -213,6 +220,7 @@ int main(void)
                 free (packet);
                 next_seq_num++;
                 packet_sent++;
+                
             }
         //}
 
@@ -222,7 +230,7 @@ int main(void)
         //     // Wait until more window is open
         //     // To be considered if something needed here...
         // }
-    } while (packet_received < packet_sent && g_tries < MAXTRIES);
+    } while (window > 0); //while ((packet_received < packet_sent) && g_tries < MAXTRIES);
 
     // const char *message = "Hello World";
     
