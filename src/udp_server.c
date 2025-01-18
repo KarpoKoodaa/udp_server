@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
             else if (gbn == true) {
 
                 printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
-                printf("Packet seq: %x\n", read[0]);
+                // printf("Packet seq: %x\n", read[0]);
                 bool gbn_result = gbn_process_packet(read, bytes_received, expected_seq_num);
                 
                 if (gbn_result == false) {
