@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // Networking Headers
 #include <sys/types.h>
@@ -37,9 +38,10 @@ int make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet)
 
 #define DEFAULT_PORT        "6666"
 #define MAXTRIES            5
-#define TIMEOUT_SECONDS      5
+#define TIMEOUT_SECONDS      2
 
 int g_tries = 0;
+bool g_timeout = false;
 crc crcTable[256];
 
 
@@ -117,8 +119,11 @@ int main(void)
     // char *packet[window_size];            // Most likely needs to be struct or char **
     char recv_packet[4096];
     // int window = 10;
+    int n_packets = strlen("Hello World");
+    
 
-    do {
+    //do 
+    while ((packet_received < n_packets) && (g_tries < MAXTRIES)) {
     
 
         fd_set reads;
@@ -128,7 +133,8 @@ int main(void)
 
         struct timeval timeout;
         timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;
+        // timeout.tv_usec = 100000;
+        timeout.tv_usec = 1000;
 
         if(select(socket_peer+1, &reads, 0,0, &timeout) < 0) {
             fprintf(stderr, "select() failed. (%d)\n", GETSOCKETERRNO());
@@ -162,13 +168,18 @@ int main(void)
                 base = recv_packet[0];
                 printf("Base: %d\n", base);
                 base++;     // Change to be ack_num + 1
-                if (base == next_seq_num) alarm(0);
-                else alarm(TIMEOUT_SECONDS);
                 packet_received++;
+                if (base == next_seq_num) {
+                    alarm(0);
+                } 
+                else alarm(TIMEOUT_SECONDS);
+                
             }
             else if (crc_result != 0) {
                 printf("CRC error!\n");
             }
+            printf("----- Packet Receive End -------\n");
+           
             free(data);
             // window--;
             
@@ -181,7 +192,7 @@ int main(void)
                 
                 // size_t size = make_packet(next_seq_num, packet[next_seq_num], packet_crc);
                 char seq_message[4096];
-                snprintf(seq_message, sizeof seq_message, "%c%c", next_seq_num, message[next_seq_num-1]); 
+                snprintf(seq_message, sizeof seq_message, "%c%c", next_seq_num, message[next_seq_num - 1]); 
 
                 // crc *data_to_send = malloc(sizeof(char) * strlen(message)  + sizeof(uint8_t));
                 crc *data_to_send = malloc(sizeof(char) * 2);
@@ -215,19 +226,44 @@ int main(void)
                     break;
                 }
                 // free(outgoing_data);
-                printf("Sent %d bytes. Data: %s\n", bytes_sent, packet);
+                printf("Sent %d bytes. Data: %x%s\n", bytes_sent, packet[0], packet);
                 free(data_to_send);
                 free (packet);
                 next_seq_num++;
                 packet_sent++;
+                printf("----- Packet Send End -------\n"); 
                 
             }
+            if (g_timeout == true) {
+                next_seq_num = base-1;
+                g_timeout = false;
+                printf("Base = %d, Next Seq: %d\n", base, next_seq_num);
+                alarm(TIMEOUT_SECONDS);
+
+            }
+        if (errno == EINTR) {
+            if (g_tries < MAXTRIES) {
+                printf("Timeout!, %d more tries....\n", MAXTRIES - g_tries);
+                break;
+            }
+        }
         //}
         // else {
         //     // Wait until more window is open
         //     // To be considered if something needed here...
         // }
-    } while ((packet_received < packet_sent) && g_tries < MAXTRIES);
+        // printf("Number of tries: %d\n", g_tries);
+    } // while ((packet_received < packet_sent) && g_tries < MAXTRIES);
+
+    // Teardown sending SEQ 0 Data 0 with 0x69
+    char teardown[5];
+    uint8_t teardown_seq = 0;
+    char *teardown_data = "00";
+    crc teardown_crc = 0x90;
+    int size = make_packet(teardown_seq, *teardown_data, teardown_crc, teardown);
+    send(socket_peer, teardown, size, 0);
+
+
 
     // const char *message = "Hello World";
     
@@ -247,6 +283,7 @@ int main(void)
 void timeout_alarm(__attribute__((unused)) int ignore)
 {
     g_tries++;
+    g_timeout = true;
 
 }
 

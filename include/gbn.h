@@ -15,8 +15,13 @@
 #include "../include/rdn_num.h"
 #include "../include/crc.h"
 
+enum Packet_status {
+  OK,
+  SEQ_NOK,
+  CRC_NOK,
+};
 
-bool gbn_process_packet (char *read, long bytes_received, int expectedseqnum);
+int gbn_process_packet (char *read, long bytes_received, int expectedseqnum);
 int gbn_make_packet(char *packet, uint8_t expectedseqnum);
 
 #endif /* __GBN_H__ */

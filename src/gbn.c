@@ -1,7 +1,7 @@
 #include "../include/gbn.h"
 
 
-bool gbn_process_packet (char *read, long bytes_received, int expectedseqnum)
+int gbn_process_packet (char *read, long bytes_received, int expectedseqnum)
 {
 
     crc data[100];
@@ -15,7 +15,11 @@ bool gbn_process_packet (char *read, long bytes_received, int expectedseqnum)
     crc result = crcFast(data, bytes_received);
 
     if (result != 0) {
-        return false;
+        printf("SEQ: %x\n", data[0]);
+        printf("DAT1: %x\n", data[1]);
+        printf("DAT2: %x\n", data[2]);
+        printf("CRC: %x\n", data[bytes_received-1]);
+        return CRC_NOK;
 
 
     }
@@ -26,10 +30,10 @@ bool gbn_process_packet (char *read, long bytes_received, int expectedseqnum)
     printf("Expected seq: %d\n", expectedseqnum);
 
     if (received_seq_num != expectedseqnum) {
-        return false;
+        return SEQ_NOK;
     }
 
-    return true;
+    return OK;
 
 }
 
