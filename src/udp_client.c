@@ -37,7 +37,7 @@ int make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet)
 #define GETSOCKETERRNO()    (errno)
 
 #define DEFAULT_PORT        "6666"
-#define MAXTRIES            5
+#define MAXTRIES            10
 #define TIMEOUT_SECONDS      2
 
 int g_tries = 0;
@@ -122,8 +122,9 @@ int main(void)
     int n_packets = strlen("Hello World");
     
 
-    //do 
-    while ((packet_received < n_packets) && (g_tries < MAXTRIES)) {
+    do { 
+    //while ((packet_received < n_packets) && (g_tries < MAXTRIES)) {
+
     
 
         fd_set reads;
@@ -136,9 +137,24 @@ int main(void)
         // timeout.tv_usec = 100000;
         timeout.tv_usec = 1000;
 
+        // if (errno == EINTR) {
+        //     if (g_tries < MAXTRIES) {
+        //         printf("Timeout!, %d more tries....\n", MAXTRIES - g_tries);
+        //         break;
+        //     }
+        // }
+
         if(select(socket_peer+1, &reads, 0,0, &timeout) < 0) {
-            fprintf(stderr, "select() failed. (%d)\n", GETSOCKETERRNO());
-            break;
+            if (errno == EINTR) {
+                printf("TImeout! %d more tries...\n", MAXTRIES - g_tries);
+                continue;
+            }
+            else {
+                fprintf(stderr, "select() failed. (%d)\n", GETSOCKETERRNO());
+                break;
+
+            }
+            
         }
 
         if(FD_ISSET(socket_peer, &reads)) {
@@ -236,24 +252,25 @@ int main(void)
             }
             if (g_timeout == true) {
                 next_seq_num = base-1;
+                packet_received = next_seq_num-1;
                 g_timeout = false;
                 printf("Base = %d, Next Seq: %d\n", base, next_seq_num);
                 alarm(TIMEOUT_SECONDS);
 
             }
-        if (errno == EINTR) {
-            if (g_tries < MAXTRIES) {
-                printf("Timeout!, %d more tries....\n", MAXTRIES - g_tries);
-                break;
-            }
-        }
+        // if (errno == EINTR) {
+        //     if (g_tries < MAXTRIES) {
+        //         printf("Timeout!, %d more tries....\n", MAXTRIES - g_tries);
+        //         break;
+        //     }
+        // }
         //}
         // else {
         //     // Wait until more window is open
         //     // To be considered if something needed here...
         // }
         // printf("Number of tries: %d\n", g_tries);
-    } // while ((packet_received < packet_sent) && g_tries < MAXTRIES);
+    }  while ((base < n_packets + 1) && g_tries < MAXTRIES);
 
     // Teardown sending SEQ 0 Data 0 with 0x69
     char teardown[5];
