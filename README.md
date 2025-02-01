@@ -41,7 +41,7 @@ The application accepts the following command-line arguments:
 ```
 
 ### Example GBN Usage
-``bash
+```bash
 ./udp-server -g -p 1234 -r 0.5
 
 - -g : Starts the server with Go-Back-N mode
