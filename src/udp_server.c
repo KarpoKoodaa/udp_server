@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
                                                                                                         rdt_vars.delay_ms);
     }
     if (gbn == true) {
-        printf("Going with GBN!!!\n");
+        printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, gbn_drop_probability);
     }
     // Precompute CRC8 table for fastCRC
     crcInit();
