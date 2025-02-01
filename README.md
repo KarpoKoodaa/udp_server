@@ -6,6 +6,8 @@ udp_server for school task
 
 
 ### TODO
+- UDP client instructions
+- Make instructions
 - Next phase
 
 ### Command-Line Arguments
@@ -36,6 +38,7 @@ The application accepts the following command-line arguments:
 - -d 0.1: Sets the probability for packet delay to 0.1.
 - -r 0.05: Sets the probability for packet drop to 0.05.
 - -t 100: Sets the delay in milliseconds to 100 ms.
+```
 
 ### Example GBN Usage
 ``bash
@@ -44,5 +47,5 @@ The application accepts the following command-line arguments:
 - -g : Starts the server with Go-Back-N mode
 - -p 1234: Sets the port to 1234 (default 6666)
 - -r 0.5: Sets the probability for packet drop to 0.5
-
+```
 
