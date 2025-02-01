@@ -2,7 +2,7 @@
 udp_server for school task 
 
 ### Hours spent
-51h 00min
+52h 00min
 
 
 ### TODO

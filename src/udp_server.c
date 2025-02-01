@@ -39,16 +39,14 @@
 
 #define DEFAULT_PORT   "6666"
 
-//int make_packet(char *packet, int version, uint8_t seq, int result);
+
 SOCKET configure_socket(struct addrinfo *bind_address);
 
 crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
-    // uint8_t seq = 0;                // Sequence 
-   //int8_t last_seq = -1;          // last_sequence
-
+    
 
     // UDP server port
     char *port = NULL;
@@ -195,9 +193,7 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Error creating packet!\n");
                     continue;
                 }
-                // printf("Packet size: %lu\n", sizeof(packet));
-                // printf("Packet len: %d\n", packet_len);
-
+                
                 printf("Remote address is: ");
                 char address_buffer[100];
                 char service_buffer[100];
@@ -221,32 +217,33 @@ int main(int argc, char* argv[]) {
             }
             else if (gbn == true) {
 
-                printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
-                // printf("Packet seq: %x\n", read[0]);
-                if (rand_number() <= gbn_drop_probability) {
+                // printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
+                printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
+
+                // Not dropping packet if teardown received
+                if ((rand_number() <= gbn_drop_probability) && (strncmp(teardown,read, 3) != 0)) {
                     printf("\033[0;31m");
-                    printf("Packet dropped\n");
+                    printf("------- Packet Dropped -------\n\n");
                     printf("\033[0m");
                     
                 }
                 else {
+                    if (strncmp(teardown, read, 3) == 0) {
+                        printf("\n------- Teardown received -------\n\n");
+                        break;
+                    }
                     int gbn_result = gbn_process_packet(read, bytes_received, expected_seq_num);
-                
+
+                    
                     if (gbn_result == CRC_NOK) {
                         printf("Packet corrupted!\n");
                         continue;
                     } else if (gbn_result == SEQ_NOK) {
                         --expected_seq_num;
-                        printf("SEQ NOK: %d\n", expected_seq_num);
-                    }
-                    if (strncmp(teardown, read, 3) == 0) {
-                        printf("Teardown received! \n");
-                        break;
-                    }
-                    all_received[expected_seq_num-1] = read[1];
-                    
+                        
+                    } else all_received[expected_seq_num-1] = read[1];
 
-
+                    printf("\n----- Sending Response -------\n");
                     char gbn_packet[10] = {0};
                     int packet_len = 0;
 
@@ -266,7 +263,7 @@ int main(int argc, char* argv[]) {
                         NI_NUMERICHOST | NI_NUMERICSERV);
                     printf("%s %s\n", address_buffer, service_buffer);
 
-                    printf("Packet: %d%s\n",gbn_packet[0], &gbn_packet[1]); 
+                    printf("Sending response: %d%s\n",gbn_packet[0], &gbn_packet[1]); 
                     sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
                     expected_seq_num++;
                 }
@@ -279,9 +276,10 @@ int main(int argc, char* argv[]) {
             
         }
     }
-    // Should never end up here
-    all_received[expected_seq_num + 1] = '\0';
-    printf("All: %s\n", all_received);
+    
+    // Teardown of GBN connection bring us here
+    all_received[expected_seq_num] = '\0';
+    printf("Received data: %s\n", all_received);
 
     printf("Finished.\n");
 
