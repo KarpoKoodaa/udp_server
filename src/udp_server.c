@@ -29,6 +29,8 @@
 #include "../include/sleep.h"
 #include "../include/rdn_num.h"
 #include "../include/crc.h"
+#include "../include/rdt.h"
+#include "../include/gbn.h"
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
@@ -37,39 +39,29 @@
 
 #define DEFAULT_PORT   "6666"
 
-typedef struct Rdt_variables
-{
-    /* data */
-    float drop_probability;
-    float delay_probability;
-    float error_probability;
-    uint16_t delay_ms;
-    uint16_t rdt;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
-} Rdt_variables;
 
-
-int make_packet(char *packet, int version, uint8_t seq, int result);
 SOCKET configure_socket(struct addrinfo *bind_address);
-bool process_packet(char *read, size_t bytes_received, struct Rdt_variables);
 
 crc crcTable[256];
 
 int main(int argc, char* argv[]) {
     
-    uint8_t seq = 0;                // Sequence 
-    int8_t last_seq = -1;          // last_sequence
-
+    
 
     // UDP server port
     char *port = NULL;
     port = DEFAULT_PORT;
-    Rdt_variables rdt_vars = {0, 0, 0, 0, 10}; 
+    bool rdt = true;
+    Rdt_variables rdt_vars = {0, 0, 0, 0, 0, -1, 10}; 
     int c = 0;
     opterr = 0;
     float rdt_version = 0;
+    bool gbn = false;
+    float gbn_drop_probability = 0;
+    int expected_seq_num = 1;
 
     // Parse command line arguments
-    while((c = getopt(argc, argv, "x:p:d:r:t:v:")) != -1) {
+    while((c = getopt(argc, argv, "x:p:d:r:t:v:g")) != -1) {
         switch (c)
         {
         case 'x':
@@ -89,6 +81,7 @@ int main(int argc, char* argv[]) {
         case 'r':
             // Probability for packet drop
             rdt_vars.drop_probability = atof(optarg);
+            gbn_drop_probability = atof(optarg);
             break;
         case 'd':
             // Probability for packet delay
@@ -101,6 +94,10 @@ int main(int argc, char* argv[]) {
         case 'v':
             rdt_vars.error_probability = (double)atof(optarg);
             break;
+        case 'g':
+            gbn = true;
+            rdt = false;
+            break;
         default:
             // TODO: Update Usage with error probability
             fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
@@ -110,13 +107,22 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt_vars.rdt, port,
+    if (rdt == true) {
+        printf("RDT: %d Port: %s \tProbability for Packet Loss: %.1f \t Probability for Packet Delay: %.1f\t Delay: %d ms\n", rdt_vars.rdt, port,
                                                                                                         rdt_vars.drop_probability, rdt_vars.delay_probability,
                                                                                                         rdt_vars.delay_ms);
-
-
+    }
+    if (gbn == true) {
+        printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, gbn_drop_probability);
+    }
     // Precompute CRC8 table for fastCRC
     crcInit();
+    
+    char all_received[4096];
+    char teardown[5];
+    char *tear_data = "00";
+    snprintf(teardown, 3, "%c%s%c", 0, tear_data, 0x90);
+    
     
     printf("Configuring local address...\n");
     struct addrinfo hints;
@@ -130,6 +136,7 @@ int main(int argc, char* argv[]) {
 
     printf("Creating socket...\n");
     SOCKET socket_listen = configure_socket(bind_address);
+    freeaddrinfo(bind_address);
 
     fd_set master;
     FD_ZERO(&master);
@@ -151,6 +158,8 @@ int main(int argc, char* argv[]) {
             socklen_t client_len = sizeof(client_address);
 
             char read[1024];
+            memset(read, '\0' , sizeof(read));
+
             long bytes_received = recvfrom(socket_listen, read, 1024, 0, (struct sockaddr *)&client_address, &client_len);
             if (bytes_received < 1) {
                 fprintf(stderr, "connection closed. (%d)\n", GETSOCKETERRNO());
@@ -158,43 +167,10 @@ int main(int argc, char* argv[]) {
             }
 
             /* VIRTUAL SOCKET BEGINS */
+            if (rdt == true) {
+                crc result = process_packet (read, bytes_received, &rdt_vars);
 
-            bool packet_dropped = process_packet(read, bytes_received, rdt_vars);
-            // Drop packet
-            if (packet_dropped) {
-                continue;
-            } 
-            else {
-
-                // Print the CRC-8
-                printf("First byte: %x\n", (unsigned char) read[0]);
-                printf("Received CRC: %x\n", (unsigned char)read[bytes_received-1]);
-                crc data[100];
-                for (long i = 0; i < bytes_received; ++i) {
-                    data[i] = read[i];
-                }
-                data[bytes_received] = '\0';
-
-                if (rdt_vars.rdt == 22) {
-                    if (read[0] == 0) seq = 0;
-                    else if (read[0] == 1) seq = 1;
-                }
-                if (rdt_vars.rdt == 30) {
-                    if (last_seq == seq) {
-                        // Duplicate
-                        printf("\033[0;31m");
-                        printf("Duplicate packet\n");
-                        printf("\033[0m");
-                        seq = last_seq;
-                    }
-                    else {
-                        if (read[0] == 0) seq = 0;
-                        else if (read[0] == 1) seq = 1;
-                    }
-                }
-
-                crc result = crcFast(data, bytes_received);
-
+        
                 printf("CRC: %d\n", result);
 
                                 
@@ -206,24 +182,27 @@ int main(int argc, char* argv[]) {
 
                 // If RDT 1.0, no ACK/NAK 
                 if (rdt_vars.rdt == 10) {
+                    printf("rdt version %d\n", rdt_vars.rdt);
                     continue;
                 }
-                packet_len = make_packet(packet, rdt_vars.rdt, seq, result);
+
+                printf("SEQ: %d\n", rdt_vars.seq);
+
+                    packet_len = make_packet(packet, rdt_vars.rdt, rdt_vars.seq, result);
                 // TODO: What is smallest packet here? Probably 4, but returns 0 if fails
                 if (packet_len < 1) {
-                    fprintf(stderr, "Error creating packet\n");
+                fprintf(stderr, "Error creating packet!\n");
                     continue;
                 }
-                //printf("Packet size: %lu\n", sizeof(packet));
-                printf("Packet len: %d\n", packet_len);
+                
                 printf("Remote address is: ");
                 char address_buffer[100];
                 char service_buffer[100];
                 getnameinfo(((struct sockaddr*)&client_address),
-                        client_len,
-                        address_buffer, sizeof(address_buffer),
-                        service_buffer, sizeof(service_buffer),
-                        NI_NUMERICHOST | NI_NUMERICSERV);
+                    client_len,
+                    address_buffer, sizeof(address_buffer),
+                    service_buffer, sizeof(service_buffer),
+                    NI_NUMERICHOST | NI_NUMERICSERV);
                 printf("%s %s\n", address_buffer, service_buffer);
                 
                 printf("Result is %d\n", result);
@@ -231,16 +210,77 @@ int main(int argc, char* argv[]) {
                     printf("Sent: CRC:%x, Packet size: %d\n", packet[packet_len - 1], packet_len);
                     sendto(socket_listen, packet, strlen(packet), 0, (struct sockaddr*)&client_address, client_len);
                 }
-                printf("Packet: %x%c%c%c%x\n", packet[0],packet[1], packet[2], packet[3], packet[4]);
+                printf("Packet: %s\n", packet);
                 
-                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[4], packet_len);
-                sendto(socket_listen, packet, packet_len, 0, (struct sockaddr*)&client_address, client_len);
+                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[3], packet_len);
+                sendto(socket_listen, packet, packet_len , 0, (struct sockaddr*)&client_address, client_len);
+
+            }
+            else if (gbn == true) {
+
+                // printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
+                printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
+
+                // Not dropping packet if teardown received
+                if ((rand_number() <= gbn_drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+                    printf("\033[0;31m");
+                    printf("------- Packet Dropped -------\n\n");
+                    printf("\033[0m");
+                    
+                }
+                else {
+                    if (strncmp(teardown, read, 3) == 0) {
+                        printf("\n------- Teardown received -------\n\n");
+                        break;
+                    }
+                    int gbn_result = gbn_process_packet(read, bytes_received, expected_seq_num);
+
+                    
+                    if (gbn_result == CRC_NOK) {
+                        printf("Packet corrupted!\n");
+                        continue;
+                    } else if (gbn_result == SEQ_NOK) {
+                        --expected_seq_num;
+                        
+                    } else all_received[expected_seq_num-1] = read[1];
+
+                    printf("\n----- Sending Response -------\n");
+                    char gbn_packet[10] = {0};
+                    int packet_len = 0;
+
+                    packet_len = gbn_make_packet(gbn_packet, expected_seq_num);
+                    if (packet_len == -1) {
+                        fprintf(stderr, "ERROR: Create packet failed");
+                        continue;
+                    }
+
+                    printf("Remote address is: ");
+                    char address_buffer[100];
+                    char service_buffer[100];
+                    getnameinfo(((struct sockaddr*)&client_address),
+                        client_len,
+                        address_buffer, sizeof(address_buffer),
+                        service_buffer, sizeof(service_buffer),
+                        NI_NUMERICHOST | NI_NUMERICSERV);
+                    printf("%s %s\n", address_buffer, service_buffer);
+
+                    printf("Sending response: %d%s\n",gbn_packet[0], &gbn_packet[1]); 
+                    sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
+                    expected_seq_num++;
+                }
+                
+
 
             }
             
+
+            
         }
     }
-    // Should never end up here
+    
+    // Teardown of GBN connection bring us here
+    all_received[expected_seq_num] = '\0';
+    printf("Received data: %s\n", all_received);
 
     printf("Finished.\n");
 
@@ -249,72 +289,20 @@ int main(int argc, char* argv[]) {
 } /* main() */
 
 /**
- * @brief Creates a packet based on the specified rdt_vars.rdt version, sequence number, and result.
+ * @brief Configures and binds a socket to a local address.
  *
- * This function constructs a packet with a specific format depending on the rdt version provided.
- * The packet contains acknowledgment (ACK/NAK) and a CRC value for integrity checking.
+ * This function creates a socket using the provided address information and attempts
+ * to bind it to a specified local address. If the socket creation or binding fails, 
+ * an error message is printed, and the function returns a failure code.
  *
- * @param[out] packet Pointer to a buffer where the created packet will be stored.
- * @param[in]  version Protocol version (e.g., 20, 21, 22, or 30 ) that determines the packet format.
- * @param[in]  seq Sequence number (0 or 1) used in the packet. Must not exceed 1.
- * @param[in]  result Result status (0 for success, non-zero for failure) influencing the ACK/NAK decision.
- * 
- * @return Length of the created packet on success, 
- *          and `-1` if error occurred
- * @note For `version == 22` and `seq == 1`, the CRC is hardcoded to 0x69 as per test app behavior.
+ * @param[in] bind_address A pointer to a struct addrinfo containing the address
+ *                         information to which the socket should be bound.
+ *                         This includes the family, type, protocol, and address.
  *
- * ### Packet Formats:
- * - **Version 20, 21**:
- *   - On success (`result == 0`): `"ACK<CRC>"`
- *   - On failure (`result != 0`): `"NAK<CRC>"`
- * - **Version 22, 30**:
- *   - On success (`result == 0`): `"<seq>ACK<CRC>"`
- *   - On failure (`result != 0`): `"<seq>NAK<CRC>"`
+ * @return A valid SOCKET if the socket is successfully created and bound,
+ *         or a failure code (1) if an error occurs during socket creation or binding.
  *
- * ### Error Handling:
- * - If error occurs, the function returns `-1` 
  */
-int make_packet(char *packet, int version, uint8_t seq, int result) {
-
-    if (seq > 1) {
-        return -1;     
-    }
-    
-    int packet_len = -1; // Length of created packet
-    uint8_t CRC = 0;    // CRC for packet
-    if (result == 0 && seq == 1) {
-        // This is strange. The test app responses ACK with CRC 69, if sequence is 1
-        CRC = 0x69;
-    }
-    else if (result == 0) {
-        CRC = 0x7f;
-    }
-    else if (result == 1){
-        CRC = 0x12;
-    }
-
-    char *ack = (result == 0 ? "ACK" : "NAK");
-
-    if (version == 20 || version == 21) {
-        size_t size = snprintf(NULL, 0, "%s%x", ack, CRC);
-        snprintf(packet, size, "%s%c", ack, CRC);
-        printf("Packet is %s\n", packet);
-        packet_len = snprintf(packet, size,"%s%x", ack, CRC);
-
-    }
-    else if (version == 22 || version == 30) {
-        size_t size = snprintf(NULL, 0, "%c%s%x",seq, ack, CRC);
-        //printf("Size is %u\n", size);
-        snprintf(packet, size, "%c%s%x", seq, ack, CRC);
-        packet_len = snprintf(packet, size, "%c%s%x", seq, ack, CRC);            
-
-    }
-    return packet_len;
-    
-} /* make_packet */
-
-// TODO: Add the hints part here as well
-// TODO: Add doxygen 
 SOCKET configure_socket(struct addrinfo *bind_address)
 {
 
@@ -322,6 +310,7 @@ SOCKET configure_socket(struct addrinfo *bind_address)
     socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
     if(!ISVALIDSOCKET(socket_listen)) {
         fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
+        // TODO: Cannot return 1!!
         return 1;
     }
 
@@ -330,37 +319,8 @@ SOCKET configure_socket(struct addrinfo *bind_address)
         fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
         return 1;
     }
-    freeaddrinfo(bind_address);
 
     return socket_listen;
 
 
 } /* configure_socket */
-
-// TODO: Add doxygen
-bool process_packet(char *read, size_t bytes_received, Rdt_variables vars)
-{
-    if (rand_number() <= vars.drop_probability) {
-        printf("\033[0;31m");
-        printf("Packet dropped\n");
-        printf("\033[0m");
-        return true;
-    }
-    // TODO: Remove else 
-    else {
-    // Add delay   
-        if (rand_number() <= vars.delay_probability) {
-            printf("\033[0;31m");
-            printf("Delay added\n");
-            printf("\033[0m");
-            msleep(vars.delay_ms);
-        }
-        // Add bit error
-        if (rand_number() <= vars.error_probability) {
-            char mask = 0x2;
-            read[bytes_received-2] = read[bytes_received-2] ^ mask;
-        }
-    }
-               
-    return false;
-} /* process_packet */
