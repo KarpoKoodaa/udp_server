@@ -14,12 +14,6 @@
 
 #include "../include/rdn_num.h"
 
-/**
- * @brief Random number generator
- * @note  Random numbers are between 0.1 - 1.0
- * @return random number divided by '10'
- */
-
 double rand_number(void)
 {
     int max = 10;

@@ -50,7 +50,5 @@ int gbn_make_packet(char *packet, uint8_t expectedseqnum)
     snprintf(packet, size + 1, "%c%s%c", expectedseqnum, ack, CRC);
 
     return  size;
-    
-
 }
 

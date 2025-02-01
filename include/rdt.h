@@ -15,18 +15,23 @@
 #include "../include/rdn_num.h"
 #include "../include/crc.h"
 
+/**
+ * @brief Stores parameters for reliable data transfer (RDT).
+ * 
+ * This struct holds various probabilities for simulating network conditions 
+ * (such as packet drops, errors, and delays) as well as sequence numbers and 
+ * the RDT version used.
+ */
 typedef struct Rdt_variables
 {
-    /* data */
-    float drop_probability;
-    float delay_probability;
-    float error_probability;
-    uint16_t delay_ms;
-    uint8_t seq;
-    int8_t last_seq;
-    uint16_t rdt;     // Reliable data transfer version (1.0, 2.0, 2.1, 2.2 or 3.0)
+    float drop_probability;   /**< Probability of a packet being dropped. */
+    float delay_probability;  /**< Probability of a packet experiencing a delay. */
+    float error_probability;  /**< Probability of a packet being corrupted. */
+    uint16_t delay_ms;        /**< Delay duration in milliseconds if delay occurs. */
+    uint8_t seq;              /**< Current sequence number of the packet. */
+    int8_t last_seq;          /**< Last acknowledged sequence number. */
+    uint16_t rdt;             /**< Reliable data transfer version (1.0, 2.0, 2.1, 2.2, or 3.0). */
 } Rdt_variables;
-
 
 
 crc process_packet (char *read, long bytes_received, Rdt_variables* vars);
