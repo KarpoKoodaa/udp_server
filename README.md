@@ -3,7 +3,7 @@ udp_server for school task
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-64h 00min
+66h 00min
 
 
 ### TODO
@@ -50,3 +50,50 @@ The application accepts the following command-line arguments:
 - -r 0.5: Sets the probability for packet drop to 0.5
 ```
 
+# Selective Repeat
+
+## Run the Server
+```bash
+build/udp-server -s -r 0.1
+
+- -s : Starts the server with Selective Repeat mode
+- -p 1234: Sets the port to 1234 (default 6666)
+- -r 0.1: Sets the probability for packet drop to 0.1
+```
+
+
+## Run teh Client
+``` bash
+./udp_client
+
+```
+### How Selective Repeat Works in This Client
+1. Divides data into packets, each assigned a unique sequence number
+2. Sends multiple packets in a sliding window (default: 5 packets at a time)
+3. Waits for ACK/NACK responses from the server
+4. If an ACK is received, the packet is marked as delivered
+5. If an NACK or timeout occurs, only the missing packets are retransmitted
+6. The process repeats until all packets are successfully acknowledged
+
+### Example Log Output
+```sql
+Configuring remote address...
+Remote address is: 127.0.0.1 6666
+Creating socket...
+Connected.
+
+Ready to send data to server
+----- Sending Packet 1 -------
+Sent 3 bytes. Data: H
+----- Packet Send End -------
+
+----- Packet Receive Start -------
+ACK Received for packet 1
+Sliding Window: Base=2, Next Expected=3, Window Size=5
+----- Packet Receive End -------
+
+----- Timeout occurred -------
+----- Resending Packet 3 -------
+Sent 3 bytes. Data: l
+----- Packet Resend End -------
+```

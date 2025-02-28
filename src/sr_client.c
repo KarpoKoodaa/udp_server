@@ -1,13 +1,31 @@
-/******************************************
+/**
  * 
- * Filename:    selective_repeat_client.c
+ * Filename:    sr_client.c
  * 
- * Description: udp_client for university exercise.
- *              Based on Lewis Van Winkle's "Hands-on Network Programming with C" book
+ * Description: Selective Repeat UDP client written in C. This implements a reliable data transfer
+ *              mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. 
+ *             
  * 
  * Copyright (c) 2025 Kariantti Laitala
- * Permission tba
- *******************************************/
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ **/
 
 // Standard Headers
 #include <stdio.h>
@@ -29,7 +47,12 @@
 #include "../include/crc.h"
 
 void timeout_alarm(__attribute__((unused))int ignore);
-int make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet);
+size_t make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet);
+
+#define RED     "\033[1;31m"
+#define ORANGE  "\033[1;33m"
+#define BLUE    "\033[1;34m"
+#define RESET   "\033[0m"
 
 #define ISVALIDSOCKET(s)    ((s) >= 0)
 #define CLOSESOCKET(s)      close(s)
@@ -47,11 +70,11 @@ enum Packet_ack {
     ACK,
 };
 
-int g_tries = 0;
-bool g_timeout = false;
+volatile int g_tries = 0;
+volatile bool g_timeout = false;
 crc crcTable[256];
 
-int packet_timer[WINDOW_SIZE];      // Timer for packets
+int packet_timer[WINDOW_SIZE];      // Timer for a sent packets. Tracking ony packets within window
 int packet_tracker[WINDOW_SIZE];       // Tracks if a packet is sent
 
 
@@ -77,6 +100,7 @@ int main(void)
     // Initialize fastCRC
     crcInit();
 
+    // Configure remote address and create a socket
     printf("Configuring remote address...\n");
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -114,20 +138,17 @@ int main(void)
 
     printf("Connected.\n");
 
-    // TODO: If custom message / data needed...
-
     printf("Ready to send data to server\n");
 
+    // Selective Repeat Client begins
 
-    // Selective Repeast Client begins
-
-    int packet_received = 0;
-    int packet_sent = 0;
+    size_t packet_received = 0;
+    size_t packet_sent = 0;
     uint8_t next_seq_num = 1;
     int window_size = WINDOW_SIZE;       // TODO: Needs to be received command line argumets
-    int base = 1;
+    size_t base = 1;
     char recv_packet[4096];
-    int n_packets = strlen(MESSAGE);
+    size_t n_packets = strlen(MESSAGE);
     
     do { 
 
@@ -141,9 +162,9 @@ int main(void)
         timeout.tv_usec = 1000;
 
         if(select(socket_peer+1, &reads, 0,0, &timeout) < 0) {
+            // Timeout occured. 
             if (errno == EINTR) {
-                printf("TImeout! %d more tries...\n", MAXTRIES - g_tries);
-                
+                                
                 alarm(TIMEOUT_SECONDS);
                 continue;
             }
@@ -155,7 +176,9 @@ int main(void)
             
         }
         
+        // Receive data from Server
         if(FD_ISSET(socket_peer, &reads)) {
+
             printf("----- Packet Receive Start -------\n");
             memset(&recv_packet, 0, sizeof(recv_packet));
             int bytes_received = recv(socket_peer, recv_packet, 4096, 0);
@@ -164,53 +187,48 @@ int main(void)
                 break;
             }
 
-            // TODO: CRC check of data
-
+            // Reserving memory for incoming message. Bytes_received is missing the NULL to terminate the string
             char *data = malloc(sizeof(char) * bytes_received + 1);
             for (long i = 0; i < bytes_received; i++) {
                 data[i] = recv_packet[i];
             }
             data[bytes_received] = '\0';
 
+            // Check the if the packet is corrupted or not
             crc crc_result = crcFast((crc *)data, bytes_received);
 
+            // If not corrupted
             if (crc_result == 0) {
-                printf("Packet ok\n");
                 int rcv_seq = 0;
                 
                 rcv_seq = recv_packet[0];
-                printf("ACK Received for packet %d\n", rcv_seq);
+                printf("ACK received: SEQ %d | CRC Check: OK\n", rcv_seq);
 
                 packet_tracker[rcv_seq] = ACK;
                 packet_timer[rcv_seq] = 0;
-                // TODO: Needs be base in sequence. If following received, needs to check what packets are already received aka ACK.
                
                 if ((rcv_seq - base) < 2) {
-                    int i = base;
+                    size_t i = base;
                     while(i < base + WINDOW_SIZE && packet_tracker[i] == ACK) {
                         i++;
                     }
                     base = i;
 
                 }
-                printf("Base is %d\n", base);
-
-                
                 // base++;
                 packet_received++;
                 
             }
             else if (crc_result != 0) {
-                printf("CRC error!\n");
+                printf("ACK Received: SEQ %d | CRC Check: NOK\n", recv_packet[0]);
             }
             printf("----- Packet Receive End -------\n\n");
            
             free(data);
             
-            
         }
 
-        // Send data
+        // Send data to Server if there is room in sending window
             if (next_seq_num < (base + window_size)) {
                 char *message = MESSAGE; 
                 
@@ -218,9 +236,9 @@ int main(void)
                 snprintf(seq_message, sizeof seq_message, "%c%c", next_seq_num, message[next_seq_num - 1]); 
 
                 
-                crc *data_to_send = malloc(sizeof(char) * 2);
+                // Event though the message size of is 2 chars, the below code is prepared for bigger messages.
                 int len = strlen(seq_message);
-
+                crc *data_to_send = malloc(len * sizeof(char));
 
                 for (long i = 0; i < len; i++) {
                     data_to_send[i] = seq_message[i];
@@ -229,8 +247,10 @@ int main(void)
                 
                 crc crc_send = crcFast(data_to_send, len);
 
-                char *packet = malloc(sizeof(char) * 100);
-                int size = make_packet(next_seq_num, message[next_seq_num - 1], crc_send, packet);
+                char *packet = malloc(sizeof(char) * len);
+                
+                // Create a packet that is sent to server
+                size_t size = make_packet(next_seq_num, message[next_seq_num - 1], crc_send, packet);
                 
                 printf("----- Sending Packet %d -------\n", next_seq_num); 
                 
@@ -239,6 +259,7 @@ int main(void)
                 packet_tracker[next_seq_num] = NACK;
                 packet_timer[next_seq_num] = TIMEOUT_SECONDS;
 
+                // Starting the timer
                 if (base == next_seq_num) {
                     alarm(TIMEOUT_SECONDS);
                 }
@@ -247,46 +268,54 @@ int main(void)
                     break;
                 }
 
-                printf("Sent %d bytes. Data: %c\n", bytes_sent, packet[1]);
+                printf("Packet sent: SEQ %d | Data: %c | Bytes: %d\n", packet[0], packet[1], bytes_sent);
+
+                // Cleaning up memory
                 free(data_to_send);
                 free (packet);
+                
+                // Increasing packet counters
                 next_seq_num++;
                 packet_sent++;
+
                 printf("----- Packet Send End -------\n\n"); 
                 
             }
+            // If the timeout occured
             if (g_timeout == true) {
                 g_timeout = false;
-                printf("Base: %d\n", base);
+                
+                // Decreasing individual packet timers
                 for (uint8_t i = base; i < base + WINDOW_SIZE; ++i) {
-                    printf("Packet timer[%d]: %d\n", i, packet_timer[i]);
-                    printf("Packet tracker[%d]: %d\n", i, packet_tracker[i]);
                     if (packet_timer[i] > 0) {
                         packet_timer[i]--;
 
+                        // If packet have timeout and do ACK received, resending packets
                         if (packet_timer[i] == 0 && packet_tracker[i] == NACK) {
-                            printf("Timeout: Retransmitting packet %d\n", i);
                             // TODO: Make and send packet
                             char *message = MESSAGE;
 
                             char seq_message[2048];
                             snprintf(seq_message, sizeof(seq_message), "%c%c", i, message[i-1]);
-                            printf("Message: %d, char: %c\n", i, message[i-1]);
-                            crc *data_to_resend = malloc(sizeof(char) * 2);
+                            
                             int len = strlen(seq_message);
+                            crc *data_to_resend = malloc(sizeof(char) * len);
 
                             for (uint8_t y = 0; y < len; ++y) {
                                 data_to_resend[y] = seq_message[y];
                             }
                             data_to_resend[len] = '\0';
-                            printf("Data to send: %s\n", data_to_resend);
+
                             crc crc_send = crcFast(data_to_resend, len);
 
-                            char *packet = malloc(sizeof(char) * 100);
+                            char *packet = malloc(sizeof(char) * len);
                             int size = make_packet(i, message[i-1], crc_send, packet);
-                            printf("----- Resending Packet %d -------\n", i); 
-                            printf("Packet: %s\n", packet);
+                            printf(BLUE "----- Timeout occurred -------\n" RESET);
+                            printf(BLUE "----- Resending Packet %d -------\n" RESET, i); 
+
                             int bytes_sent = send(socket_peer, packet, size, 0);
+
+                            printf("Packet resent: SEQ %d | Data: %c | Bytes: %d\n", packet[0], packet[1], bytes_sent);
             
                             packet_tracker[i] = NACK;
                             packet_timer[i] = TIMEOUT_SECONDS;
@@ -295,10 +324,9 @@ int main(void)
                                 break;
                             }
             
-                            printf("Sent %d bytes. Data: %c\n", bytes_sent, packet[1]);
                             free(data_to_resend);
                             free (packet);
-                            printf("----- Packet Resend End -------\n\n"); 
+                            printf(BLUE "----- Packet Resend End -------\n\n" RESET); 
 
 
                         }
@@ -309,6 +337,7 @@ int main(void)
     }  while ((base < n_packets + 1) && g_tries < MAXTRIES);
 
     // Teardown sending SEQ 0 Data 0 with 0x69
+    printf("------- ALL PACKETS SENT AND RECEIVED -------\n");
     printf("------- Teardown the connection -------\n\n");
     char teardown[5];
     uint8_t teardown_seq = 0;
@@ -318,7 +347,7 @@ int main(void)
     send(socket_peer, teardown, size, 0);
 
     freeaddrinfo(peer_address);
-    printf("Tries: %d \t Packets sent: %d \t Packets received: %d\n", g_tries, packet_sent, packet_received);
+    printf("Retries left: %d \t Packets sent: %zu \t Packets received: %zu\n", g_tries, packet_sent, packet_received);
     CLOSESOCKET(socket_peer);
 
     printf("Finished\n\n");
@@ -331,12 +360,23 @@ void timeout_alarm(__attribute__((unused)) int ignore)
 {
     g_tries++;
     g_timeout = true;
-    printf("Timeout!!!!!!\n");
-    
 
 }
 
-int make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet)
+/**
+ * @brief Constructs a data packet with a sequence number, data, and CRC checksum.
+ *
+ * This function creates a packet by formatting the sequence number, data byte, 
+ * and CRC checksum into a string format.
+ *
+ * @param next_sequence The sequence number of the packet.
+ * @param data The data character to be sent.
+ * @param packet_crc The CRC checksum for error detection.
+ * @param packet A pointer to the buffer where the constructed packet will be stored.
+ * 
+ * @return The size of the created packet, or -1 if the sequence number is invalid.
+ */
+size_t make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet)
 {
 
     if (next_sequence < 0) {
