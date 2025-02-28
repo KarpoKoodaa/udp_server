@@ -7,9 +7,7 @@ http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 
 ### TODO
-- UDP client instructions
-- Make instructions
-- Next phase
+- Refactor the code
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
@@ -18,6 +16,7 @@ The application accepts the following command-line arguments:
 |-------------------------------------|----------------------------------------|-----------|
 | RDT Version                         | RDT version to use 1.0, 2.0, 2.1, 2.2 or 3.0 | `-x`|
 | Go-Back-N                           | Go-Back-N Server Mode                  | `-g`      |
+| Selective Repeat                    | Selective Repeat Server Mode           | `-g`      |
 | Port number                         | The port your application uses (default: `6666`)        | `-p`      |
 | Probability for packet delay        | Delay probability (0.0 to 1.0)         | `-d`      |
 | Probability for packet drop         | Drop probability (0.0 to 1.0)          | `-r`      |
@@ -26,7 +25,8 @@ The application accepts the following command-line arguments:
 ### Default Values
 - **Port**: If the `-p` argument is not provided, the default port number will be `6666`.
 - **RDT**: If the `-x`argument is not provided, the default rdt will be `rdt 1.0`
-- **GBN**: If the `-g`argument is not provided, the default will be rdt mode.
+- **GBN**: If the `-g`argument is not provided, the default will be RDT mode.
+- **SR**: If the `-g`argument is not provided, the default will be RDT mode.
 - **Other**: If arguments for probability and delay is not provided, the default values will be `0`.
 
 ### Example RDT Usage 
@@ -50,8 +50,6 @@ The application accepts the following command-line arguments:
 - -r 0.5: Sets the probability for packet drop to 0.5
 ```
 
-# Selective Repeat
-
 ## Run the Server
 ```bash
 build/udp-server -s -r 0.1
@@ -61,8 +59,10 @@ build/udp-server -s -r 0.1
 - -r 0.1: Sets the probability for packet drop to 0.1
 ```
 
+# Selective Repeat
+ Selective Repeat UDP Client implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
 
-## Run teh Client
+## Run the Client
 ``` bash
 ./udp_client
 
