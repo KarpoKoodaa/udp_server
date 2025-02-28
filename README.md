@@ -1,8 +1,9 @@
 # udp_server
 udp_server for school task 
+http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-52h 00min
+64h 00min
 
 
 ### TODO

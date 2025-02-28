@@ -31,16 +31,25 @@
 #include "../include/crc.h"
 #include "../include/rdt.h"
 #include "../include/gbn.h"
+#include "../include/sr.h"
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s)   close(s)
 #define SOCKET int
 #define GETSOCKETERRNO() (errno)
 
+#define WINDOW_SIZE     5
+#define MAX_BUFFER_SIZE 50
+
 #define DEFAULT_PORT   "6666"
 
 
 SOCKET configure_socket(struct addrinfo *bind_address);
+
+// typedef struct {
+//     bool received[MAX_BUFFER_SIZE]; 
+//     char data[MAX_BUFFER_SIZE];
+// } sr_receive_buffer_t;
 
 crc crcTable[256];
 
@@ -60,8 +69,15 @@ int main(int argc, char* argv[]) {
     float gbn_drop_probability = 0;
     int expected_seq_num = 1;
 
+    bool sr = false;
+    float sr_drop_probability = 0;
+    int rcv_base = 1;
+    sr_receive_buffer_t sr_receive_buffer = {{false}, {0}};
+    int last_seq = 0;
+
+
     // Parse command line arguments
-    while((c = getopt(argc, argv, "x:p:d:r:t:v:g")) != -1) {
+    while((c = getopt(argc, argv, "x:p:d:r:t:v:gs")) != -1) {
         switch (c)
         {
         case 'x':
@@ -82,6 +98,7 @@ int main(int argc, char* argv[]) {
             // Probability for packet drop
             rdt_vars.drop_probability = atof(optarg);
             gbn_drop_probability = atof(optarg);
+            sr_drop_probability = atof(optarg);
             break;
         case 'd':
             // Probability for packet delay
@@ -98,6 +115,10 @@ int main(int argc, char* argv[]) {
             gbn = true;
             rdt = false;
             break;
+        case 's':
+            sr = true;
+            rdt = false;
+            break;
         default:
             // TODO: Update Usage with error probability
             fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
@@ -112,8 +133,11 @@ int main(int argc, char* argv[]) {
                                                                                                         rdt_vars.drop_probability, rdt_vars.delay_probability,
                                                                                                         rdt_vars.delay_ms);
     }
-    if (gbn == true) {
+    else if (gbn == true) {
         printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, gbn_drop_probability);
+    }
+    else if (sr == true) {
+        printf("Selective Repeat Port: %s \tProbability for Packet Loss %.1f\n", port, sr_drop_probability);
     }
     // Precompute CRC8 table for fastCRC
     crcInit();
@@ -268,8 +292,84 @@ int main(int argc, char* argv[]) {
                     sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
                     expected_seq_num++;
                 }
-                
 
+            }
+            else if (sr == true) {
+                // printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
+                printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
+
+                // Not dropping packet if teardown received
+                if ((rand_number() <= gbn_drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+                    printf("\033[0;31m");
+                    printf("------- Packet Dropped -------\n\n");
+                    printf("\033[0m");
+                    
+                }
+                else {
+                    if (strncmp(teardown, read, 3) == 0) {
+                        printf("\n------- Teardown received -------\n\n");
+                        break;
+                    }
+                    int sr_result = sr_process_packet(read, bytes_received);
+
+                    
+                    if (sr_result == -2) {
+                        printf("Packet corrupted!\n");
+                        continue;
+                    }
+                    //TODO: Is this needed in SR?
+                    char sr_packet[10] = {0};
+                    int packet_len = 0;
+                    if (sr_result >= rcv_base && sr_result < rcv_base + WINDOW_SIZE) {
+                        
+                        if(sr_receive_buffer.received[sr_result] == false) {
+                            sr_receive_buffer.received[sr_result] = true;
+                            sr_receive_buffer.data[sr_result] = read[1];
+
+                            if (sr_result == rcv_base) {
+                                rcv_base = deliver_data(sr_receive_buffer, all_received, rcv_base);
+                                
+                            }
+                        }
+                        packet_len = sr_make_packet(sr_packet, sr_result);
+                    } 
+                    else if (sr_result >= rcv_base - WINDOW_SIZE && sr_result < rcv_base) {
+                        // Packet is already received
+                        //TODO: Add packet creation here
+                        packet_len = sr_make_packet(sr_packet, sr_result);
+                    }
+                    else {
+                        // Packet out of range
+                        printf("Packet %d out of range, ignore\n", sr_result);
+                        printf("Current rcvbase: %d\n", rcv_base);
+                        continue;
+                    }
+                    printf("Current rcvbase: %d\n", rcv_base);
+
+                    printf("\n----- Sending Response -------\n");
+                    // char sr_packet[10] = {0};
+                    // int packet_len = 0;
+
+                    // packet_len = sr_make_packet(sr_packet, expected_seq_num);
+                    if (packet_len == -1) {
+                        fprintf(stderr, "ERROR: Create packet failed");
+                        continue;
+                    }
+
+                    printf("Remote address is: ");
+                    char address_buffer[100];
+                    char service_buffer[100];
+                    getnameinfo(((struct sockaddr*)&client_address),
+                        client_len,
+                        address_buffer, sizeof(address_buffer),
+                        service_buffer, sizeof(service_buffer),
+                        NI_NUMERICHOST | NI_NUMERICSERV);
+                    printf("%s %s\n", address_buffer, service_buffer);
+
+                    printf("Sending response: %d%s\n",sr_packet[0], &sr_packet[1]); 
+                    sendto(socket_listen, sr_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
+                    last_seq = sr_result;
+                }
 
             }
             
@@ -277,9 +377,9 @@ int main(int argc, char* argv[]) {
             
         }
     }
-    
+    last_seq = rcv_base; 
     // Teardown of GBN connection bring us here
-    all_received[expected_seq_num] = '\0';
+    all_received[last_seq] = '\0';
     printf("Received data: %s\n", all_received);
 
     printf("Finished.\n");
