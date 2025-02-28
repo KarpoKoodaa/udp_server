@@ -61,7 +61,8 @@ build/udp-server -s -r 0.1
 
 # Selective Repeat
  Selective Repeat UDP Client implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
- Selective Repeat client supports only port 6666 (default port of server)
+
+**Selective Repeat client supports only port 6666 (default port of server)**
 
 ## Run the Client
 ``` bash
