@@ -59,6 +59,7 @@ size_t make_packet (uint8_t next_sequence, char data, crc packet_crc, char *pack
 #define SOCKET              int
 #define GETSOCKETERRNO()    (errno)
 
+#define SERVER_IP           "127.0.0.1"
 #define DEFAULT_PORT        "6666"
 #define MAXTRIES            20
 #define TIMEOUT_SECONDS     2
@@ -106,7 +107,7 @@ int main(void)
     memset(&hints, 0, sizeof(hints));
     hints.ai_socktype = SOCK_DGRAM;
     struct addrinfo *peer_address;
-    if (getaddrinfo("127.0.0.1", DEFAULT_PORT, &hints, &peer_address)) {
+    if (getaddrinfo(SERVER_IP, DEFAULT_PORT, &hints, &peer_address)) {
         fprintf(stderr, "getaddrinfo() failed. (%d)\n", GETSOCKETERRNO());
         return 1;
     }
@@ -188,14 +189,18 @@ int main(void)
             }
 
             // Reserving memory for incoming message. Bytes_received is missing the NULL to terminate the string
-            char *data = malloc(sizeof(char) * bytes_received + 1);
-            for (long i = 0; i < bytes_received; i++) {
-                data[i] = recv_packet[i];
+            // char *data = malloc(sizeof(char) * bytes_received + 1);
+            char *data = malloc(bytes_received + 1);
+            if (!data) {
+                fprintf(stderr, "Memory allocation failed\n");
+                exit(1);
             }
+            memcpy(data, recv_packet, bytes_received);
             data[bytes_received] = '\0';
 
             // Check the if the packet is corrupted or not
             crc crc_result = crcFast((crc *)data, bytes_received);
+            free(data);
 
             // If not corrupted
             if (crc_result == 0) {
@@ -215,7 +220,6 @@ int main(void)
                     base = i;
 
                 }
-                // base++;
                 packet_received++;
                 
             }
@@ -224,7 +228,6 @@ int main(void)
             }
             printf("----- Packet Receive End -------\n\n");
            
-            free(data);
             
         }
 
@@ -239,6 +242,10 @@ int main(void)
                 // Event though the message size of is 2 chars, the below code is prepared for bigger messages.
                 int len = strlen(seq_message);
                 crc *data_to_send = malloc(len * sizeof(char));
+                if (!data_to_send) {
+                    fprintf(stderr, "Memory allocation failed");
+                    exit(1);
+                }
 
                 for (long i = 0; i < len; i++) {
                     data_to_send[i] = seq_message[i];
@@ -246,8 +253,14 @@ int main(void)
                 data_to_send[len] = '\0';
                 
                 crc crc_send = crcFast(data_to_send, len);
+                free(data_to_send);
 
                 char *packet = malloc(sizeof(char) * len);
+                if (!packet) {
+                    fprintf(stderr, "Memory allocation failed\n");
+                    exit(1);
+
+                }
                 
                 // Create a packet that is sent to server
                 size_t size = make_packet(next_seq_num, message[next_seq_num - 1], crc_send, packet);
@@ -271,7 +284,7 @@ int main(void)
                 printf("Packet sent: SEQ %d | Data: %c | Bytes: %d\n", packet[0], packet[1], bytes_sent);
 
                 // Cleaning up memory
-                free(data_to_send);
+                // free(data_to_send);
                 free (packet);
                 
                 // Increasing packet counters
@@ -378,10 +391,6 @@ void timeout_alarm(__attribute__((unused)) int ignore)
  */
 size_t make_packet (uint8_t next_sequence, char data, crc packet_crc, char *packet)
 {
-
-    if (next_sequence < 0) {
-        return -1;
-    }
 
     size_t len = snprintf(NULL, 0, "%c%c%c", next_sequence, data, packet_crc);
 

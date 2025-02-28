@@ -3,7 +3,7 @@ udp_server for school task
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-66h 00min
+67h 00min
 
 
 ### TODO
@@ -61,6 +61,7 @@ build/udp-server -s -r 0.1
 
 # Selective Repeat
  Selective Repeat UDP Client implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
+ Selective Repeat client supports only port 6666 (default port of server)
 
 ## Run the Client
 ``` bash

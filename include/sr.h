@@ -17,18 +17,6 @@
 
 #define MAX_BUFFER_SIZE 50
 
-/**
- * @brief Represents the status of a received packet in the Selective Repeat protocol.
- * 
- * This enum defines possible outcomes when processing a received packet, 
- * including success, sequence number mismatch, and CRC errors.
- */
-// enum Packet_status {
-//     OK,       /**< Packet processed successfully. */
-//     SEQ_NOK,  /**< Sequence number mismatch. */
-//     CRC_NOK   /**< CRC error detected in the packet. */
-// };
-
 typedef struct {
     bool received[MAX_BUFFER_SIZE]; 
     char data[MAX_BUFFER_SIZE];

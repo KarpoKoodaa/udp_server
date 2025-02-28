@@ -43,6 +43,11 @@
 
 #define DEFAULT_PORT   "6666"
 
+#define RED     "\033[1;31m"
+#define ORANGE  "\033[1;33m"
+#define BLUE    "\033[1;34m"
+#define RESET   "\033[0m"
+
 
 SOCKET configure_socket(struct addrinfo *bind_address);
 
@@ -65,12 +70,16 @@ int main(int argc, char* argv[]) {
     int c = 0;
     opterr = 0;
     float rdt_version = 0;
+
+    float drop_probability = 0;
+
+    
+
     bool gbn = false;
-    float gbn_drop_probability = 0;
+    
     int expected_seq_num = 1;
 
     bool sr = false;
-    float sr_drop_probability = 0;
     int rcv_base = 1;
     sr_receive_buffer_t sr_receive_buffer = {{false}, {0}};
     int last_seq = 0;
@@ -97,8 +106,7 @@ int main(int argc, char* argv[]) {
         case 'r':
             // Probability for packet drop
             rdt_vars.drop_probability = atof(optarg);
-            gbn_drop_probability = atof(optarg);
-            sr_drop_probability = atof(optarg);
+            drop_probability = atof(optarg);
             break;
         case 'd':
             // Probability for packet delay
@@ -134,10 +142,10 @@ int main(int argc, char* argv[]) {
                                                                                                         rdt_vars.delay_ms);
     }
     else if (gbn == true) {
-        printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, gbn_drop_probability);
+        printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, drop_probability);
     }
     else if (sr == true) {
-        printf("Selective Repeat Port: %s \tProbability for Packet Loss %.1f\n", port, sr_drop_probability);
+        printf("Selective Repeat Port: %s \tProbability for Packet Loss %.1f\n", port, drop_probability);
     }
     // Precompute CRC8 table for fastCRC
     crcInit();
@@ -246,7 +254,7 @@ int main(int argc, char* argv[]) {
                 printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
 
                 // Not dropping packet if teardown received
-                if ((rand_number() <= gbn_drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+                if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
                     printf("\033[0;31m");
                     printf("------- Packet Dropped -------\n\n");
                     printf("\033[0m");
@@ -294,15 +302,13 @@ int main(int argc, char* argv[]) {
                 }
 
             }
+
+            // TODO: Check what is similar to GBN and remove overlapping part
             else if (sr == true) {
-                // printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
-                printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
 
                 // Not dropping packet if teardown received
-                if ((rand_number() <= gbn_drop_probability) && (strncmp(teardown,read, 3) != 0)) {
-                    printf("\033[0;31m");
-                    printf("------- Packet Dropped -------\n\n");
-                    printf("\033[0m");
+                if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+                    printf(RED "------- Packet Dropped -------\n\n" RESET);
                     
                 }
                 else {
