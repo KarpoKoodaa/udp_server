@@ -137,7 +137,8 @@ int main(int argc, char* argv[]) {
                                                                                                         rdt_vars.delay_ms);
     }
     else if (gbn == true) {
-        printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, drop_probability);
+        port = DEFAULT_PORT;
+        printf("Go-Back-N Port: %s \tProbability for Packet Loss: %.1f\n", port, drop_probability);
     }
     else if (sr == true) {
         port = DEFAULT_PORT;
@@ -253,56 +254,49 @@ int main(int argc, char* argv[]) {
             }
             else if (gbn == true) {
 
-                // printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
-
-                // // Not dropping packet if teardown received
-                // if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
-                //     printf("\033[0;31m");
-                //     printf("------- Packet Dropped -------\n\n");
-                //     printf("\033[0m");
-                    
-                // }
-                // else {
-                    if (strncmp(teardown, read, 3) == 0) {
-                        printf("\n------- Teardown received -------\n\n");
-                        break;
-                    }
-                    int gbn_result = gbn_process_packet(read, bytes_received, expected_seq_num);
+                // Check if connection teardown is received
+                if (strncmp(teardown, read, 3) == 0) {
+                    printf("\n------- Teardown received -------\n\n");
+                    break;
+                }
+                int gbn_result = gbn_process_packet(read, bytes_received, expected_seq_num);
 
                     
-                    if (gbn_result == CRC_NOK) {
-                        printf("Packet corrupted!\n");
-                        continue;
-                    } else if (gbn_result == SEQ_NOK) {
-                        --expected_seq_num;
-                        
-                    } else all_received[expected_seq_num-1] = read[1];
+                // If packet is corrupted
+                if (gbn_result == CRC_NOK) {
+                    printf(RED "Packet Received | CRC Check: NOK\n\n" RESET);
+                    continue;
+                // If the SEQ number is not what expected, reduce one from counter.
+                } else if (gbn_result == SEQ_NOK) {
+                    --expected_seq_num;
+                    
+                // Adding received packet to Upper Layer
+                } else all_received[expected_seq_num-1] = read[1];
 
-                    printf("\n----- Sending Response -------\n");
-                    char gbn_packet[10] = {0};
-                    int packet_len = 0;
+                printf("\n----- Sending Response -------\n");
+                char gbn_packet[10] = {0};
+                int packet_len = 0;
 
-                    packet_len = gbn_make_packet(gbn_packet, expected_seq_num);
-                    if (packet_len == -1) {
-                        fprintf(stderr, "ERROR: Create packet failed");
-                        continue;
-                    }
+                packet_len = gbn_make_packet(gbn_packet, expected_seq_num);
+                if (packet_len == -1) {
+                    fprintf(stderr, "ERROR: Create packet failed");
+                    continue;
+                }
 
-                    printf("Remote address is: ");
-                    char address_buffer[100];
-                    char service_buffer[100];
-                    getnameinfo(((struct sockaddr*)&client_address),
-                        client_len,
-                        address_buffer, sizeof(address_buffer),
-                        service_buffer, sizeof(service_buffer),
-                        NI_NUMERICHOST | NI_NUMERICSERV);
-                    printf("%s %s\n", address_buffer, service_buffer);
+                printf("Remote address is: ");
+                char address_buffer[100];
+                char service_buffer[100];
+                getnameinfo(((struct sockaddr*)&client_address),
+                    client_len,
+                    address_buffer, sizeof(address_buffer),
+                    service_buffer, sizeof(service_buffer),
+                    NI_NUMERICHOST | NI_NUMERICSERV);
+                printf("%s %s\n", address_buffer, service_buffer);
 
-                    printf("Sending response: %d%s\n",gbn_packet[0], &gbn_packet[1]); 
-                    sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
-                    expected_seq_num++;
-                // }
-
+                printf("Sending response: %d%s\n",gbn_packet[0], &gbn_packet[1]); 
+                sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
+                expected_seq_num++;
+                printf("----- Sending Response End -------\n\n");
             }
 
             /* Selective Repeat Server Part */
@@ -374,8 +368,6 @@ int main(int argc, char* argv[]) {
 
 
             }
-            
-
             
         }
     }

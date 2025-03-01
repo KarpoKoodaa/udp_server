@@ -3,7 +3,7 @@ udp_server for school task
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-69h 00min
+71h 00min
 
 
 ### TODO
@@ -43,10 +43,9 @@ The application accepts the following command-line arguments:
 
 ### Example GBN Usage
 ```bash
-./udp-server -g -p 1234 -r 0.5
+./udp-server -g -r 0.5
 
 - -g : Starts the server with Go-Back-N mode
-- -p 1234: Sets the port to 1234 (default 6666)
 - -r 0.5: Sets the probability for packet drop to 0.5
 ```
 
@@ -58,6 +57,48 @@ build/udp-server -s -r 0.1
 - -r 0.1: Sets the probability for packet drop to 0.1
 ```
 
+# Go-Back-N
+The gbn_client.c is a Go-Back-N (GBN) UDP client implemented in C. It provides a reliable data transfer mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. This implementation ensures that packets are delivered in order and without corruption by utilizing CRC-based error checking.
+
+** Supports only port 6666 (Default port of the server)**
+
+## Run the Client
+``` bash
+./sr_client
+
+```
+
+### How Go-Back-N Works in This Client
+1. Divides data into packets, each assigned a unique sequence number
+2. Sends multiple packets in a sliding window (default: 5 packets at a time)
+3. Waits for ACK/NACK responses from the server
+4. If an ACK is received, the the window base is the received ACK's sequence number
+5. If timeout occurs, all packet starting from base is resent. 
+6. The process repeats until all packets are successfully acknowledged
+
+
+### Example Log Output
+```sql
+Configuring remote address...
+Remote address is: 127.0.0.1 6666
+Creating socket...
+Connecting...
+Connected.
+
+Ready to send data to server
+----- Sending Packet 1 -------
+Packet sent: SEQ 1 | Data: H | Bytes: 3
+----- Packet Send End -------
+
+----- Packet Receive Start -------
+ACK received: SEQ 1 | Data: A | CRC Check: OK
+----- Packet Receive End -------
+
+----- Timeout occurred -------
+Window base: 5 | Next SEQ: 5
+----- Timeout end -------
+```
+
 # Selective Repeat
  Selective Repeat UDP Client implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
 
@@ -65,7 +106,7 @@ build/udp-server -s -r 0.1
 
 ## Run the Client
 ``` bash
-./udp_client
+./sr_client
 
 ```
 ### How Selective Repeat Works in This Client

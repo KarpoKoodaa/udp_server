@@ -162,6 +162,8 @@ int main(void)
             // Timeout occurred
             if (errno == EINTR) {
                 printf("TImeout! %d more tries...\n", MAXTRIES - g_tries);
+                printf(BLUE "----- Timeout occurred -------\n" RESET);
+                printf("Retries left: %d | Next SEQ: %d\n", MAXTRIES - g_tries, next_seq_num);
                 continue;
             }
             else {
@@ -198,7 +200,7 @@ int main(void)
 
             if (crc_result == OK) {
                 base = recv_packet[0];
-                printf("ACK received: SEQ %zu | CRC Check: OK\n", base);
+                printf("ACK received: SEQ %zu | CRC Check: OK\n", base); 
                 
                 // Increase packet counters
                 base++;     
