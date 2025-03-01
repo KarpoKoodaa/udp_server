@@ -3,7 +3,7 @@ udp_server for school task
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-67h 00min
+69h 00min
 
 
 ### TODO
@@ -55,7 +55,6 @@ The application accepts the following command-line arguments:
 build/udp-server -s -r 0.1
 
 - -s : Starts the server with Selective Repeat mode
-- -p 1234: Sets the port to 1234 (default 6666)
 - -r 0.1: Sets the probability for packet drop to 0.1
 ```
 

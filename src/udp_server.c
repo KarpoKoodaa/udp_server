@@ -51,11 +51,6 @@
 
 SOCKET configure_socket(struct addrinfo *bind_address);
 
-// typedef struct {
-//     bool received[MAX_BUFFER_SIZE]; 
-//     char data[MAX_BUFFER_SIZE];
-// } sr_receive_buffer_t;
-
 crc crcTable[256];
 
 int main(int argc, char* argv[]) {
@@ -145,12 +140,15 @@ int main(int argc, char* argv[]) {
         printf("GBN Port: %s \tProbability for Packet Loss: %.1f\n", port, drop_probability);
     }
     else if (sr == true) {
+        port = DEFAULT_PORT;
         printf("Selective Repeat Port: %s \tProbability for Packet Loss %.1f\n", port, drop_probability);
     }
     // Precompute CRC8 table for fastCRC
     crcInit();
     
     char all_received[4096];
+    
+    // Preparing the Teardown data that is used to Teardown the connection. 
     char teardown[5];
     char *tear_data = "00";
     snprintf(teardown, 3, "%c%s%c", 0, tear_data, 0x90);
@@ -307,6 +305,7 @@ int main(int argc, char* argv[]) {
 
             }
 
+            /* Selective Repeat Server Part */
             else if (sr == true) {
 
                 // Check if connection teardown is received
@@ -316,15 +315,16 @@ int main(int argc, char* argv[]) {
                 }
                 int sr_result = sr_process_packet(read, bytes_received);
 
-                    
-                // TODO: NO MAGIC NUMBERS
-                if (sr_result == -2) {
+                // If the Packet is corrupted
+                if (sr_result == NAK) {
                     printf(RED "Packet Received | CRC Check: NOK\n\n" RESET);
                     continue;
                 }
                 
                 char sr_packet[10] = {0};
                 int packet_len = 0;
+                
+                // Checking that the Received packet is within the Receiving Window
                 if (sr_result >= rcv_base && sr_result < rcv_base + WINDOW_SIZE) {
                     
                     if(sr_receive_buffer.received[sr_result] == false) {
@@ -339,11 +339,12 @@ int main(int argc, char* argv[]) {
                     packet_len = sr_make_packet(sr_packet, sr_result);
                 } 
                 else if (sr_result >= rcv_base - WINDOW_SIZE && sr_result < rcv_base) {
-                    // Packet is already received
+
+                    // Packet is already received, but sending ACK anyway
                     packet_len = sr_make_packet(sr_packet, sr_result);
                 }
                 else {
-                    // Packet out of range
+                    // Packet out of range, ignoring
                     printf("Packet %d out of range, ignore\n", sr_result);
                     printf("Current rcvbase: %d\n", rcv_base);
                     continue;

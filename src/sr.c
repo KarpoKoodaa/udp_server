@@ -13,7 +13,7 @@ int sr_process_packet (char *read, long bytes_received)
     crc result = crcFast(data, bytes_received);
 
     if (result != 0) {
-        return -2;
+        return NAK;
     }
 
     int received_seq_num = (int)read[0];
@@ -48,16 +48,18 @@ int deliver_data(sr_receive_buffer_t buffer, char *data, int recv_base)
 {
     int base = recv_base;
 
-    printf("----- Delivering Packets to Upper Layer -------\n");
+    printf("\n----- Delivering Packets to Upper Layer -------\n");
     while(buffer.received[base]) {
         data[base-1] = buffer.data[base];
-        printf("idx: %d, char: %c\n", base-1, data[base-1]);
-        buffer.received[base] = false;    // chaging to false
+        printf("Packet %d  | Data: %c\n", base, data[base-1]); 
+
+        // Changing packet state to false, so it won't read again
+        buffer.received[base] = false;  
         base++; 
     }
+    printf("\n----- Delivering Done -------\n");
     
     data[base] = '\0';
-    printf("Data: %s\n", data);
     return base;
 
 }
