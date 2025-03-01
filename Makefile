@@ -14,7 +14,7 @@ EXEC2 := $(BUILD_DIR)/gbn-client
 EXEC3 := $(BUILD_DIR)/sr_client
 SRC := $(wildcard $(SRC_DIR)/*.c)
 EXEC_SRC := ./src/udp_server.c ./src/crc.c ./src/sleep.c ./src/rdn_num.c ./src/rdt.c ./src/gbn.c ./src/sr.c
-EXEC2_SRC := ./src/udp_client.c ./src/crc.c
+EXEC2_SRC := ./src/gbn_client.c ./src/crc.c
 EXEC3_SRC := ./src/sr_client.c ./src/crc.c
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 

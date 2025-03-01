@@ -380,8 +380,14 @@ int main(int argc, char* argv[]) {
         }
     }
     // TODO: This might not work for GBN
-    last_seq = rcv_base; 
-    // Teardown of GBN connection bring us here
+    // Adding NULL to terminate the received data. Size of data depends on the mode (GBN or SR)
+    if (gbn == true) {
+        last_seq = expected_seq_num;
+
+    }
+    else if (sr == true) {
+        last_seq = rcv_base; 
+    }
     all_received[last_seq] = '\0';
     printf("Received data: %s\n", all_received);
 

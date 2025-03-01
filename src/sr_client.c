@@ -198,7 +198,7 @@ int main(void)
             memcpy(data, recv_packet, bytes_received);
             data[bytes_received] = '\0';
 
-            // Check the if the packet is corrupted or not
+            // Check if the packet is corrupted or not
             crc crc_result = crcFast((crc *)data, bytes_received);
             free(data);
 
@@ -284,7 +284,6 @@ int main(void)
                 printf("Packet sent: SEQ %d | Data: %c | Bytes: %d\n", packet[0], packet[1], bytes_sent);
 
                 // Cleaning up memory
-                // free(data_to_send);
                 free (packet);
                 
                 // Increasing packet counters
