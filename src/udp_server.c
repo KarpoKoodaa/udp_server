@@ -248,19 +248,23 @@ int main(int argc, char* argv[]) {
                 sendto(socket_listen, packet, packet_len , 0, (struct sockaddr*)&client_address, client_len);
 
             }
+
+            if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+                printf(RED "------- Packet Dropped -------\n\n" RESET);
+                    
+            }
             else if (gbn == true) {
 
-                // printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
-                printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
+                // printf("\nReceived (%ld bytes) Data: %c\n", bytes_received, read[1]);
 
-                // Not dropping packet if teardown received
-                if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
-                    printf("\033[0;31m");
-                    printf("------- Packet Dropped -------\n\n");
-                    printf("\033[0m");
+                // // Not dropping packet if teardown received
+                // if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+                //     printf("\033[0;31m");
+                //     printf("------- Packet Dropped -------\n\n");
+                //     printf("\033[0m");
                     
-                }
-                else {
+                // }
+                // else {
                     if (strncmp(teardown, read, 3) == 0) {
                         printf("\n------- Teardown received -------\n\n");
                         break;
@@ -299,83 +303,74 @@ int main(int argc, char* argv[]) {
                     printf("Sending response: %d%s\n",gbn_packet[0], &gbn_packet[1]); 
                     sendto(socket_listen, gbn_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
                     expected_seq_num++;
-                }
+                // }
 
             }
 
-            // TODO: Check what is similar to GBN and remove overlapping part
             else if (sr == true) {
 
-                // Not dropping packet if teardown received
-                if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
-                    printf(RED "------- Packet Dropped -------\n\n" RESET);
+                // Check if connection teardown is received
+                if (strncmp(teardown, read, 3) == 0) {
+                    printf("\n------- Teardown received -------\n\n");
+                    break;
+                }
+                int sr_result = sr_process_packet(read, bytes_received);
+
                     
+                // TODO: NO MAGIC NUMBERS
+                if (sr_result == -2) {
+                    printf(RED "Packet Received | CRC Check: NOK\n\n" RESET);
+                    continue;
+                }
+                
+                char sr_packet[10] = {0};
+                int packet_len = 0;
+                if (sr_result >= rcv_base && sr_result < rcv_base + WINDOW_SIZE) {
+                    
+                    if(sr_receive_buffer.received[sr_result] == false) {
+                        sr_receive_buffer.received[sr_result] = true;
+                        sr_receive_buffer.data[sr_result] = read[1];
+
+                        if (sr_result == rcv_base) {
+                            rcv_base = deliver_data(sr_receive_buffer, all_received, rcv_base);
+                            
+                        }
+                    }
+                    packet_len = sr_make_packet(sr_packet, sr_result);
+                } 
+                else if (sr_result >= rcv_base - WINDOW_SIZE && sr_result < rcv_base) {
+                    // Packet is already received
+                    packet_len = sr_make_packet(sr_packet, sr_result);
                 }
                 else {
-                    if (strncmp(teardown, read, 3) == 0) {
-                        printf("\n------- Teardown received -------\n\n");
-                        break;
-                    }
-                    int sr_result = sr_process_packet(read, bytes_received);
-
-                    
-                    if (sr_result == -2) {
-                        printf("Packet corrupted!\n");
-                        continue;
-                    }
-                    //TODO: Is this needed in SR?
-                    char sr_packet[10] = {0};
-                    int packet_len = 0;
-                    if (sr_result >= rcv_base && sr_result < rcv_base + WINDOW_SIZE) {
-                        
-                        if(sr_receive_buffer.received[sr_result] == false) {
-                            sr_receive_buffer.received[sr_result] = true;
-                            sr_receive_buffer.data[sr_result] = read[1];
-
-                            if (sr_result == rcv_base) {
-                                rcv_base = deliver_data(sr_receive_buffer, all_received, rcv_base);
-                                
-                            }
-                        }
-                        packet_len = sr_make_packet(sr_packet, sr_result);
-                    } 
-                    else if (sr_result >= rcv_base - WINDOW_SIZE && sr_result < rcv_base) {
-                        // Packet is already received
-                        //TODO: Add packet creation here
-                        packet_len = sr_make_packet(sr_packet, sr_result);
-                    }
-                    else {
-                        // Packet out of range
-                        printf("Packet %d out of range, ignore\n", sr_result);
-                        printf("Current rcvbase: %d\n", rcv_base);
-                        continue;
-                    }
+                    // Packet out of range
+                    printf("Packet %d out of range, ignore\n", sr_result);
                     printf("Current rcvbase: %d\n", rcv_base);
-
-                    printf("\n----- Sending Response -------\n");
-                    // char sr_packet[10] = {0};
-                    // int packet_len = 0;
-
-                    // packet_len = sr_make_packet(sr_packet, expected_seq_num);
-                    if (packet_len == -1) {
-                        fprintf(stderr, "ERROR: Create packet failed");
-                        continue;
-                    }
-
-                    printf("Remote address is: ");
-                    char address_buffer[100];
-                    char service_buffer[100];
-                    getnameinfo(((struct sockaddr*)&client_address),
-                        client_len,
-                        address_buffer, sizeof(address_buffer),
-                        service_buffer, sizeof(service_buffer),
-                        NI_NUMERICHOST | NI_NUMERICSERV);
-                    printf("%s %s\n", address_buffer, service_buffer);
-
-                    printf("Sending response: %d%s\n",sr_packet[0], &sr_packet[1]); 
-                    sendto(socket_listen, sr_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
-                    last_seq = sr_result;
+                    continue;
                 }
+
+                printf("\n----- Sending Response -------\n");
+
+                if (packet_len == -1) {
+                    fprintf(stderr, "ERROR: Create packet failed");
+                    continue;
+                }
+
+                printf("Remote address is: ");
+                char address_buffer[100];
+                char service_buffer[100];
+                getnameinfo(((struct sockaddr*)&client_address),
+                    client_len,
+                    address_buffer, sizeof(address_buffer),
+                    service_buffer, sizeof(service_buffer),
+                    NI_NUMERICHOST | NI_NUMERICSERV);
+                printf("%s %s\n", address_buffer, service_buffer);
+
+                printf("Sending response: %d%s\n",sr_packet[0], &sr_packet[1]); 
+                sendto(socket_listen, sr_packet, packet_len, 0, (struct sockaddr*) &client_address, client_len);
+                last_seq = sr_result;
+                printf("----- Sending Response End -------\n\n");
+
 
             }
             
@@ -383,6 +378,7 @@ int main(int argc, char* argv[]) {
             
         }
     }
+    // TODO: This might not work for GBN
     last_seq = rcv_base; 
     // Teardown of GBN connection bring us here
     all_received[last_seq] = '\0';

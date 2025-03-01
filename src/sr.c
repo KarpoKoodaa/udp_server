@@ -6,10 +6,8 @@ int sr_process_packet (char *read, long bytes_received)
 
     crc data[100];
     memset(data, '\0', sizeof(data));
-
-    for (long i = 0; i < bytes_received; ++i) {
-        data[i] = read[i];
-    }
+   
+    memcpy(data, read, bytes_received);
     data[bytes_received] = '\0';
 
     crc result = crcFast(data, bytes_received);
@@ -19,9 +17,8 @@ int sr_process_packet (char *read, long bytes_received)
     }
 
     int received_seq_num = (int)read[0];
-    printf("----- Packet Received Successfully -------\n");
-    // Now there is now expected sequence number, so need to consider hot do this
-    printf("%d Received\n", received_seq_num);
+    printf("----- Packet Received -------\n");
+    printf("Received: SEQ %d | CRC Check: OK\n", received_seq_num); 
 
     return received_seq_num;
 
@@ -30,7 +27,6 @@ int sr_process_packet (char *read, long bytes_received)
 
 int sr_make_packet(char *packet, uint8_t seqnum)
 {
-    // int packet_len = -1;
     crc CRC = 0;
     char *ack = "ACK";
 
