@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 
 
     // Parse command line arguments
-    while((c = getopt(argc, argv, "x:p:d:r:t:v:gs")) != -1) {
+    while((c = getopt(argc, argv, "x:p:d:r:t:v:gsh")) != -1) {
         switch (c)
         {
         case 'x':
@@ -112,20 +112,41 @@ int main(int argc, char* argv[]) {
             rdt_vars.delay_ms = atoi(optarg);
             break;
         case 'v':
+            // Error probability
             rdt_vars.error_probability = (double)atof(optarg);
             break;
         case 'g':
+            // Go-Back-N Selected
             gbn = true;
             rdt = false;
             break;
         case 's':
+            // Selective Repeat Selected
             sr = true;
             rdt = false;
             break;
+        case 'h':
+            printf("HELP: \n");
+            printf("Usage rdt:\t\t %s -x [version] -p [port] -d [delay_probability] -r [drop_probability] -t [delay_ms] -v [error_probability]\n", argv[0]);
+            printf("Usage Go-Back-N:\t %s -g -r [drop_probability]\n", argv[0]);
+            printf("Usage Selective Repeat:\t %s -s -r [drop_probability]\n", argv[0]);
+            return 1;
+            break;
         default:
-            // TODO: Update Usage with error probability
-            fprintf(stderr, "Usage: %s -p port -d delay_probability -r drop_probability -t delay_ms\n",
-                           argv[0]);
+            if (rdt == true) {
+                fprintf(stderr, "Usage rdt : %s -x version -p port -d delay_probability -r drop_probability -t delay_ms -v error_probability\n", argv[0]);
+            }
+            else if (gbn == true) {
+                fprintf(stderr, "Usage Go-Back-N: %s -g -r drop_probability\n", argv[0]);
+
+            }
+            else if (sr == true) {
+                fprintf(stderr, "Usage Selective Repeat: %s -s -r drop_probability\n", argv[0]);
+
+            }
+            else {
+                fprintf(stderr, "Usage: %s -h for help\n", argv[0]);
+            } 
             return 1;
             break;
         }

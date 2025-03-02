@@ -20,6 +20,7 @@ The application accepts the following command-line arguments:
 | Port number                         | The port your application uses (default: `6666`)        | `-p`      |
 | Probability for packet delay        | Delay probability (0.0 to 1.0)         | `-d`      |
 | Probability for packet drop         | Drop probability (0.0 to 1.0)          | `-r`      |
+| Probability for packet error        | 1 bit error probability (0.0 to 1.0)   | `-v`      |
 | Delay in milliseconds               | Delay time in ms                       | `-t`      |
 
 ### Default Values
@@ -32,12 +33,13 @@ The application accepts the following command-line arguments:
 ### Example RDT Usage 
 
 ```bash
-./udp_server -x 2.2 -p 1243 -d 0.1 -r 0.05 -t 100
+./udp_server -x 2.2 -p 1243 -d 0.1 -r 0.05 -v 0.2 -t 100
 
 - -x 2.2: Sets RDT version 2.2
 - -p 1243: Sets the port number to 1243. (default 6666)
 - -d 0.1: Sets the probability for packet delay to 0.1.
 - -r 0.05: Sets the probability for packet drop to 0.05.
+- -v 0.2: Sets the probability for 1 bit packet error to 0.2.
 - -t 100: Sets the delay in milliseconds to 100 ms.
 ```
 
@@ -57,18 +59,18 @@ build/udp-server -s -r 0.1
 - -r 0.1: Sets the probability for packet drop to 0.1
 ```
 
-# Go-Back-N
+### Go-Back-N
 The gbn_client.c is a Go-Back-N (GBN) UDP client implemented in C. It provides a reliable data transfer mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. This implementation ensures that packets are delivered in order and without corruption by utilizing CRC-based error checking.
 
-** Supports only port 6666 (Default port of the server)**
+**Supports only port 6666 (Default port of the server)**
 
-## Run the Client
+#### Run the Client
 ``` bash
 ./sr_client
 
 ```
 
-### How Go-Back-N Works in This Client
+#### How Go-Back-N Works in This Client
 1. Divides data into packets, each assigned a unique sequence number
 2. Sends multiple packets in a sliding window (default: 5 packets at a time)
 3. Waits for ACK/NACK responses from the server
@@ -77,7 +79,7 @@ The gbn_client.c is a Go-Back-N (GBN) UDP client implemented in C. It provides a
 6. The process repeats until all packets are successfully acknowledged
 
 
-### Example Log Output
+#### Example Log Output
 ```sql
 Configuring remote address...
 Remote address is: 127.0.0.1 6666
@@ -99,17 +101,17 @@ Window base: 5 | Next SEQ: 5
 ----- Timeout end -------
 ```
 
-# Selective Repeat
+### Selective Repeat
  Selective Repeat UDP Client implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
 
 **Selective Repeat client supports only port 6666 (default port of server)**
 
-## Run the Client
+#### Run the Client
 ``` bash
 ./sr_client
 
 ```
-### How Selective Repeat Works in This Client
+#### How Selective Repeat Works in This Client
 1. Divides data into packets, each assigned a unique sequence number
 2. Sends multiple packets in a sliding window (default: 5 packets at a time)
 3. Waits for ACK/NACK responses from the server
@@ -117,7 +119,7 @@ Window base: 5 | Next SEQ: 5
 5. If an NACK or timeout occurs, only the missing packets are retransmitted
 6. The process repeats until all packets are successfully acknowledged
 
-### Example Log Output
+#### Example Log Output
 ```sql
 Configuring remote address...
 Remote address is: 127.0.0.1 6666
