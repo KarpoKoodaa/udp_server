@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
     FD_SET(socket_listen, &master);
     SOCKET max_socket = socket_listen;
 
-    printf("Waiting for connections....\n");
+    printf("Waiting for connections....\n\n");
 
     while (1) {
         fd_set reads;
@@ -199,13 +199,20 @@ int main(int argc, char* argv[]) {
 
             /* VIRTUAL SOCKET BEGINS */
             if (rdt == true) {
+                
+                printf("----- Packet Receive Start -------\n");
+
+                // Doing the CRC check for the packet
                 crc result = process_packet (read, bytes_received, &rdt_vars);
 
-        
-                printf("CRC: %d\n", result);
-
+                char *recv_packet = malloc(bytes_received + 1);
+                memcpy(recv_packet, read, bytes_received);
+                recv_packet[bytes_received] = '\0';
                                 
-                printf("Received (%ld bytes): %.*s\n", bytes_received, (int)bytes_received, read);
+                char *crc_result = (result == 0) ? "OK" : "NOK";
+                printf("Packet received: SEQ %d | Data: %s | Bytes: %ld | CRC Check: %s\n", rdt_vars.seq, &recv_packet[1], bytes_received, crc_result); 
+                free(recv_packet);
+                printf("----- Packet Receive End -------\n");
                 
                 char packet[8];
                 memset(packet, 0, sizeof(packet));
@@ -213,19 +220,19 @@ int main(int argc, char* argv[]) {
 
                 // If RDT 1.0, no ACK/NAK 
                 if (rdt_vars.rdt == 10) {
-                    printf("rdt version %d\n", rdt_vars.rdt);
+                    printf("RDT Version: %d | No ACK\n", rdt_vars.rdt);
                     continue;
                 }
 
-                printf("SEQ: %d\n", rdt_vars.seq);
-
-                    packet_len = make_packet(packet, rdt_vars.rdt, rdt_vars.seq, result);
-                // TODO: What is smallest packet here? Probably 4, but returns 0 if fails
+                packet_len = make_packet(packet, rdt_vars.rdt, rdt_vars.seq, result);
+                
+                // If packet creation fails, print error but continue
                 if (packet_len < 1) {
                 fprintf(stderr, "Error creating packet!\n");
                     continue;
                 }
                 
+                printf("\n----- Sending Response -------\n");
                 printf("Remote address is: ");
                 char address_buffer[100];
                 char service_buffer[100];
@@ -236,19 +243,25 @@ int main(int argc, char* argv[]) {
                     NI_NUMERICHOST | NI_NUMERICSERV);
                 printf("%s %s\n", address_buffer, service_buffer);
                 
-                printf("Result is %d\n", result);
+                // printf("Result is %d\n", result);
                 if (result != 0) {
                     printf("Sent: CRC:%x, Packet size: %d\n", packet[packet_len - 1], packet_len);
                     sendto(socket_listen, packet, strlen(packet), 0, (struct sockaddr*)&client_address, client_len);
                 }
-                printf("Packet: %s\n", packet);
+                // printf("Packet: %s\n", packet);
                 
-                printf("Sent v%1.1f: SEQ: %d CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[3], packet_len);
+                if (rdt_vars.rdt == 20 || rdt_vars.rdt == 21) {
+                    printf("Packet Sent v%1.1f: Data: %s CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet, packet[3], packet_len);
+
+                }
+                else printf("Packet Sent v%1.1f: SEQ: %x CRC: %x, size: %d\n", (float)rdt_vars.rdt/10, packet[0], packet[3], packet_len);
+
                 sendto(socket_listen, packet, packet_len , 0, (struct sockaddr*)&client_address, client_len);
+                printf("----- Sending Response End -------\n\n");
 
-            }
+            } // RDT ENDS
 
-            if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0)) {
+            if ((rand_number() <= drop_probability) && (strncmp(teardown,read, 3) != 0) && rdt == false) {
                 printf(RED "------- Packet Dropped -------\n\n" RESET);
                     
             }

@@ -1,21 +1,23 @@
 
 #include "../include/rdt.h"
 
+#define RED     "\033[1;31m"
+#define ORANGE  "\033[1;33m"
+#define BLUE    "\033[1;34m"
+#define RESET   "\033[0m"
+
+
 crc process_packet (char *read, long bytes_received, Rdt_variables* vars)
 {
     if (rand_number() <= vars->drop_probability) {
-        printf("\033[0;31m");
-        printf("Packet dropped\n");
-        printf("\033[0m");
+        printf(RED "------- Packet Dropped -------\n\n" RESET);
         return true;
     }
     // TODO: Remove else 
     else {
     // Add delay   
         if (rand_number() <= vars->delay_probability) {
-            printf("\033[0;31m");
-            printf("Delay added\n");
-            printf("\033[0m");
+            printf(RED "------- Delay Added -------\n\n" RESET);
             msleep(vars->delay_ms);
         }
         // Add bit error
@@ -28,12 +30,10 @@ crc process_packet (char *read, long bytes_received, Rdt_variables* vars)
     crc data[100];
     memset(data, '\0', sizeof(data));
     
-    for (long i = 0; i < bytes_received; ++i) {
-        data[i] = read[i];
-    }
+    memcpy(data, read, bytes_received);
     data[bytes_received] = '\0';
 
-    printf("READ[0] = %d\n", read[0]);
+    // printf("READ[0] = %d\n", read[0]);
     if (vars->rdt == 22) {
         if(read[0] == 0) vars->seq = 0;
         else if (read[0] == 1) vars->seq = 1;
@@ -42,9 +42,7 @@ crc process_packet (char *read, long bytes_received, Rdt_variables* vars)
     if (vars->rdt == 30) {
         if (vars->last_seq == vars->seq) {
             // Duplicate
-            printf("\033[0;31m");
-            printf("Duplicate packet\n");
-            printf("\033[0m");
+            printf(RED "------- Duplicate Packet -------\n\n" RESET);
             vars->seq = vars->last_seq;
         } 
     
@@ -54,7 +52,7 @@ crc process_packet (char *read, long bytes_received, Rdt_variables* vars)
         }
     }
 
-    printf("seq = %d\n", vars->seq);
+    // printf("seq = %d\n", vars->seq);
     crc result = crcFast(data, bytes_received);
 
     return result;
@@ -64,11 +62,6 @@ crc process_packet (char *read, long bytes_received, Rdt_variables* vars)
 
 int make_packet(char *packet, int version, uint8_t seq, int result) {
 
-    printf("Packet seq: %d\n", seq);
-    if (seq > 1) {
-        return -1;     
-    }
-    
     int packet_len = -1; // Length of created packet
     uint8_t CRC = 0;    // CRC for packet
     if (result == 0 && seq == 1) {
@@ -84,18 +77,19 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
 
     char *ack = (result == 0 ? "ACK" : "NAK");
 
+    // If rdt version is 2.0 or 2.1, no seq number needed with ACK packet.
     if (version == 20 || version == 21) {
         snprintf(packet, sizeof(packet), "%s%c", ack, CRC);
-        printf("Packet is %s\n", packet);
         packet_len = snprintf(packet, sizeof(packet),"%s%c", ack, CRC);
 
     }
+    // rdt version 2.2 and 3.0 needs seq number with ACK packet
     else if (version == 22 || version == 30) {
         snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);
         packet_len = snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);            
 
     }
-    printf("Packet len: %d\n", packet_len);
+
     return packet_len;
     
 } /* make_packet */

@@ -3,11 +3,11 @@ udp_server for school task
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-71h 00min
+72h 00min
 
 
 ### TODO
-- Refactor the code
+- Finalize documentation 
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
