@@ -1,5 +1,5 @@
 # Reliability on top of UDP 
-udp_server for school task 
+
 Purpose of this application is to learn implement different reliability methods when different amount of reliability is needed. 
 More info:
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
@@ -29,7 +29,7 @@ The application accepts the following command-line arguments:
 - **Other**: If arguments for probability, packet error, and delay is not provided, the default values will be `0`.
 
 ### RDT Usage 
-#### Tasks: Virtual Socket, Positive and Negative ACKs and Reliable Transfer Protocol
+**Tasks:** Virtual Socket, Positive and Negative ACKs and Reliable Transfer Protocol
 
 **Server**
 ```bash
@@ -44,6 +44,7 @@ The application accepts the following command-line arguments:
 ```
 
 **Client**
+
 You must use provided chat application as client for testing the RDT server. Chat application is found from course pages.
 
 ### Go-Back-N
@@ -60,6 +61,8 @@ The Go-Back-N (GBN) UDP client and server implemented in C. It provides a reliab
 ```
 
 #### Run the Client
+
+Client will send a predefined message "***Hello World from GB-N***" to server in sliding window.
 ``` bash
 build/sr_client
 
@@ -102,6 +105,8 @@ Selective Repeat UDP Client and server implemented in C, designed to reliably tr
 **Client supports only port 6666 (default port of server)**
 
 ### Run the server
+Client will send a predefined message "***Hello World from Selective Repeat***" to server in sliding window.
+
 ```bash
 build/udp-server -s -r 0.1
 
