@@ -5,7 +5,7 @@ More info:
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-74h 00min
+75h 00min
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
@@ -105,7 +105,6 @@ Selective Repeat UDP Client and server implemented in C, designed to reliably tr
 **Client supports only port 6666 (default port of server)**
 
 ### Run the server
-Client will send a predefined message "***Hello World from Selective Repeat***" to server in sliding window.
 
 ```bash
 build/udp-server -s -r 0.1
@@ -115,6 +114,8 @@ build/udp-server -s -r 0.1
 ```
 
 #### Run the Client
+
+Client will send a predefined message "***Hello World from Selective Repeat***" to server in sliding window.
 ``` bash
 build/sr_client
 
