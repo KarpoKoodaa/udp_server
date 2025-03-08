@@ -79,14 +79,16 @@ int make_packet(char *packet, int version, uint8_t seq, int result) {
 
     // If rdt version is 2.0 or 2.1, no seq number needed with ACK packet.
     if (version == 20 || version == 21) {
-        snprintf(packet, sizeof(packet), "%s%c", ack, CRC);
-        packet_len = snprintf(packet, sizeof(packet),"%s%c", ack, CRC);
+        size_t size = strlen(ack) + 2;  // Adding 2 as one for CRC and other for null terminator
+        snprintf(packet, size, "%s%c", ack, CRC);
+        packet_len = snprintf(packet, size,"%s%c", ack, CRC);
 
     }
     // rdt version 2.2 and 3.0 needs seq number with ACK packet
     else if (version == 22 || version == 30) {
-        snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);
-        packet_len = snprintf(packet, sizeof(packet), "%c%s%c", seq, ack, CRC);            
+        size_t size = strlen(ack) + 3;  // Adding 3 as one for SEQ, one for CRC and for null terminator 
+        snprintf(packet, size, "%c%s%c", seq, ack, CRC);
+        packet_len = snprintf(packet, size, "%c%s%c", seq, ack, CRC);            
 
     }
 
