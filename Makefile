@@ -25,7 +25,6 @@ all: $(EXEC) $(EXEC2) $(EXEC3)
 
 $(EXEC): $(BUILD_DIR)
 	$(CC) $(CC_FLAGS) -o $@ $(EXEC_SRC) 
-# $(CC) $(CC_FLAGS) -o $@ ${SRC}
 
 $(EXEC2): $(BUILD_DIR)
 	$(CC) $(CC_FLAGS) -o $@ $(EXEC2_SRC) 
@@ -35,9 +34,6 @@ $(EXEC3): $(BUILD_DIR)
 
 $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@
-
-#gbn: $(BUILD_DIR)  
-#	$(CC) $(CC_FLAGS) -o $@  $(SRC_DIR)/gbn_server.c $(SRC_DIR)/crc.c
 
 
 clean:

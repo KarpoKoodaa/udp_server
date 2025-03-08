@@ -8,10 +8,21 @@ http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 75h 00min
 
 ### Compile the Server and Clients
-Compilation tested with MacOS Ventura 13.7 and Ubuntu Linux 20.04
+
+#### Requrements
+- **Operating System**: Linux/macOS (or Windows with WSL/Cygwin)
+- **Compiler**: GCC 
+- **GNU Make** to build the project
+- ****Compilation tested with MacOS Ventura 13.7 and Ubuntu Linux 20.04****
+
 ```bash
 make -B all
 ```
+#### Compilation Flags Explanation
+The Makefile includes strict compilation flags for better code quality:
+- Wall -Wextra -Wpedantic -Werror → Enables strict warnings
+- Wshadow -Wformat=2 -Wunused-parameter → Catches common mistakes
+
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
@@ -157,3 +168,6 @@ Sliding Window: Base=2, Next Expected=3, Window Size=5
 Sent 3 bytes. Data: l
 ----- Packet Resend End -------
 ```
+
+## License
+This project is licensed under the MIT License
