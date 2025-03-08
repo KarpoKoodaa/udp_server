@@ -7,6 +7,12 @@ http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 ### Hours spent
 75h 00min
 
+### Compile the Server and Clients
+Compilation tested with MacOS Ventura 13.7 and Ubuntu Linux 20.04
+```bash
+make -B all
+```
+
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
 
