@@ -24,7 +24,7 @@ The Makefile includes strict compilation flags for better code quality:
 - Wshadow -Wformat=2 -Wunused-parameter → Catches common mistakes
 
 
-### Command-Line Arguments
+## Command-Line Arguments
 The application accepts the following command-line arguments:
 
 | Argument                            | Description                            | Shorthand |
@@ -45,7 +45,7 @@ The application accepts the following command-line arguments:
 - **SR**: If the `-s`argument is not provided, the default will be RDT mode.
 - **Other**: If arguments for probability, packet error, and delay is not provided, the default values will be `0`.
 
-### RDT Usage 
+## RDT Usage 
 **Tasks:** Virtual Socket, Positive and Negative ACKs and Reliable Transfer Protocol
 
 **Server**
@@ -64,7 +64,7 @@ The application accepts the following command-line arguments:
 
 You must use provided chat application as client for testing the RDT server. Chat application is found from course pages.
 
-### Go-Back-N
+## Go-Back-N
 The Go-Back-N (GBN) UDP client and server implemented in C. It provides a reliable data transfer mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. This implementation ensures that packets are delivered in order and without corruption by utilizing CRC-based error checking.
 
 **Client supports only port 6666 (Default port of the server)**
@@ -116,7 +116,7 @@ Window base: 5 | Next SEQ: 5
 ----- Timeout end -------
 ```
 
-### Selective Repeat
+## Selective Repeat
 Selective Repeat UDP Client and server implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
 
 **Client supports only port 6666 (default port of server)**
