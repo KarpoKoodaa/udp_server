@@ -1,13 +1,11 @@
-# udp_server
+# Reliability on top of UDP 
 udp_server for school task 
+Purpose of this application is to learn implement different reliability methods when different amount of reliability is needed. 
+More info:
 http://users.jyu.fi/~arjuvi/opetus/ties322/2018/demot.html
 
 ### Hours spent
-72h 00min
-
-
-### TODO
-- Finalize documentation 
+74h 00min
 
 ### Command-Line Arguments
 The application accepts the following command-line arguments:
@@ -27,23 +25,33 @@ The application accepts the following command-line arguments:
 - **Port**: If the `-p` argument is not provided, the default port number will be `6666`.
 - **RDT**: If the `-x`argument is not provided, the default rdt will be `rdt 1.0`
 - **GBN**: If the `-g`argument is not provided, the default will be RDT mode.
-- **SR**: If the `-g`argument is not provided, the default will be RDT mode.
-- **Other**: If arguments for probability and delay is not provided, the default values will be `0`.
+- **SR**: If the `-s`argument is not provided, the default will be RDT mode.
+- **Other**: If arguments for probability, packet error, and delay is not provided, the default values will be `0`.
 
-### Example RDT Usage 
+### RDT Usage 
+#### Tasks: Virtual Socket, Positive and Negative ACKs and Reliable Transfer Protocol
 
+**Server**
 ```bash
-./udp_server -x 2.2 -p 1243 -d 0.1 -r 0.05 -v 0.2 -t 100
+./udp_server -x 2.2 -p 1243 -d 0.1 -r 0.05 -v 0.2 -t 3000
 
 - -x 2.2: Sets RDT version 2.2
 - -p 1243: Sets the port number to 1243. (default 6666)
 - -d 0.1: Sets the probability for packet delay to 0.1.
 - -r 0.05: Sets the probability for packet drop to 0.05.
 - -v 0.2: Sets the probability for 1 bit packet error to 0.2.
-- -t 100: Sets the delay in milliseconds to 100 ms.
+- -t 3000: Sets the delay in milliseconds to 3000ms, 3 seconds.
 ```
 
-### Example GBN Usage
+**Client**
+You must use provided chat application as client for testing the RDT server. Chat application is found from course pages.
+
+### Go-Back-N
+The Go-Back-N (GBN) UDP client and server implemented in C. It provides a reliable data transfer mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. This implementation ensures that packets are delivered in order and without corruption by utilizing CRC-based error checking.
+
+**Client supports only port 6666 (Default port of the server)**
+
+#### Run the server
 ```bash
 ./udp-server -g -r 0.5
 
@@ -51,22 +59,9 @@ The application accepts the following command-line arguments:
 - -r 0.5: Sets the probability for packet drop to 0.5
 ```
 
-## Run the Server
-```bash
-build/udp-server -s -r 0.1
-
-- -s : Starts the server with Selective Repeat mode
-- -r 0.1: Sets the probability for packet drop to 0.1
-```
-
-### Go-Back-N
-The gbn_client.c is a Go-Back-N (GBN) UDP client implemented in C. It provides a reliable data transfer mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. This implementation ensures that packets are delivered in order and without corruption by utilizing CRC-based error checking.
-
-**Supports only port 6666 (Default port of the server)**
-
 #### Run the Client
 ``` bash
-./sr_client
+build/sr_client
 
 ```
 
@@ -102,15 +97,24 @@ Window base: 5 | Next SEQ: 5
 ```
 
 ### Selective Repeat
- Selective Repeat UDP Client implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
+Selective Repeat UDP Client and server implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
 
-**Selective Repeat client supports only port 6666 (default port of server)**
+**Client supports only port 6666 (default port of server)**
+
+### Run the server
+```bash
+build/udp-server -s -r 0.1
+
+- -s : Starts the server with Selective Repeat mode
+- -r 0.1: Sets the probability for packet drop to 0.1
+```
 
 #### Run the Client
 ``` bash
-./sr_client
+build/sr_client
 
 ```
+
 #### How Selective Repeat Works in This Client
 1. Divides data into packets, each assigned a unique sequence number
 2. Sends multiple packets in a sliding window (default: 5 packets at a time)
