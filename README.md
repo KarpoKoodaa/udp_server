@@ -45,6 +45,9 @@ The application accepts the following command-line arguments:
 - **SR**: If the `-s`argument is not provided, the default will be RDT mode.
 - **Other**: If arguments for probability, packet error, and delay is not provided, the default values will be `0`.
 
+
+
+
 ## RDT Usage 
 **Tasks:** Virtual Socket, Positive and Negative ACKs and Reliable Transfer Protocol
 
@@ -63,6 +66,9 @@ The application accepts the following command-line arguments:
 **Client**
 
 You must use provided chat application as client for testing the RDT server. Chat application is found from course pages.
+
+
+
 
 ## Go-Back-N
 The Go-Back-N (GBN) UDP client and server implemented in C. It provides a reliable data transfer mechanism over an unreliable UDP connection by handling packet loss, retransmissions, and acknowledgments. This implementation ensures that packets are delivered in order and without corruption by utilizing CRC-based error checking.
@@ -115,6 +121,9 @@ ACK received: SEQ 1 | Data: A | CRC Check: OK
 Window base: 5 | Next SEQ: 5
 ----- Timeout end -------
 ```
+
+
+
 
 ## Selective Repeat
 Selective Repeat UDP Client and server implemented in C, designed to reliably transmit messages over UDP while handling packet loss and reordering.
